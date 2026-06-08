@@ -1,0 +1,496 @@
+{
+  "lessons": [
+    {
+      "id": "algo-complejidad",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Complejidad de tiempo y espacio",
+      "summary": "Cómo medir el costo de loops y recursión.",
+      "added": "2026-06-09",
+      "body": "La **complejidad de tiempo** mide cuántas operaciones hace un algoritmo en función del tamaño de la entrada **n**. La **complejidad de espacio** mide cuánta memoria extra usa. Ambas se expresan en notación **Big-O**, que describe el comportamiento en el peor caso ignorando constantes.\n\nPara calcularla en **loops**: contá cuántas veces ejecuta el cuerpo. Un loop simple → O(n). Dos loops anidados sobre la misma colección → O(n²). Un loop que divide el índice a la mitad cada vez → O(log n). Para **recursión**: dibujá el árbol de llamadas y contá niveles × ancho.\n\nLa **regla del término dominante** dice: cuando sumás complejidades, te quedás solo con la mayor. O(n² + n) = O(n²). Las constantes y los coeficientes se descartan porque a escala grande no cambian la categoría.\n\n| Complejidad | Nombre | Ejemplo típico |\n|---|---|---|\n| O(1) | Constante | Acceso por índice |\n| O(log n) | Logarítmica | Búsqueda binaria |\n| O(n) | Lineal | Recorrer un array |\n| O(n log n) | Log-lineal | Merge sort |\n| O(n²) | Cuadrática | Loops anidados |\n| O(2ⁿ) | Exponencial | Recursión sin memoización |\n\n```mermaid\nflowchart TB\n  A[Loop simple n veces] --> B[O-n]\n  C[Loop con indice a la mitad] --> D[O-log-n]\n  E[Dos loops anidados sobre n] --> F[O-n-cuadrado]\n  G[Recursion que se divide en 2 mitades] --> H[O-n-log-n]\n```\n\n## Ejemplo\n\n```python\n# O(n) tiempo, O(1) espacio\ndef suma(arr):\n    total = 0          # variable fija, no crece con n\n    for x in arr:      # recorre n veces\n        total += x\n    return total\n\n# O(n^2) tiempo, O(1) espacio\ndef pares_duplicados(arr):\n    for i in range(len(arr)):       # n veces\n        for j in range(i+1, len(arr)):  # ~n/2 veces\n            if arr[i] == arr[j]:\n                print(arr[i], arr[j])\n```\n\n💡 **En la entrevista:** siempre declará la complejidad de tu solución antes de codearla. Si el entrevistador pide \"algo mejor\", sabés en qué categoría tenés que apuntar.",
+      "cards": [
+        {
+          "id": "algo-complejidad-1",
+          "front": "¿Qué mide la complejidad de tiempo?",
+          "back": "Cuántas operaciones realiza el algoritmo en función del tamaño de la entrada n, expresado en Big-O.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-complejidad-2",
+          "front": "¿Cuál es la complejidad de dos loops anidados que recorren el mismo array?",
+          "back": "O(n²): el cuerpo interno ejecuta ~n veces por cada una de las n iteraciones del externo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-complejidad-3",
+          "front": "¿Qué dice la regla del término dominante?",
+          "back": "Cuando sumás complejidades te quedás solo con la mayor. O(n² + n) = O(n²). Las constantes se descartan.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-complejidad-4",
+          "front": "¿Por qué un loop que divide el índice a la mitad cada vez es O(log n)?",
+          "back": "Porque el número de iteraciones crece de forma logarítmica: para duplicar las iteraciones hay que cuadruplicar n.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-complejidad-5",
+          "front": "¿Cuál es la diferencia entre complejidad de tiempo y de espacio?",
+          "back": "Tiempo: cuántas operaciones. Espacio: cuánta memoria extra (auxiliar) usa el algoritmo, sin contar la entrada.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "algo-busqueda",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Algoritmos de búsqueda",
+      "summary": "Lineal O(n) vs binaria O(log n).",
+      "added": "2026-06-09",
+      "body": "La **búsqueda lineal** recorre el arreglo de principio a fin hasta encontrar el elemento. No requiere ningún orden previo, pero en el peor caso revisa todos los n elementos → **O(n)**.\n\nLa **búsqueda binaria** aprovecha que el arreglo está **ordenado**: compara el elemento del medio con el objetivo y descarta la mitad incorrecta. Cada paso divide el problema a la mitad, lo que da **O(log n)** comparaciones. En un arreglo de 1 000 000 elementos, la búsqueda binaria necesita a lo sumo ~20 comparaciones.\n\nEl **requisito crítico** de la binaria es que el arreglo esté ordenado. Si el ordenamiento es costoso (y solo buscás una vez), puede no valer la pena. Si buscás muchas veces, el costo de ordenar se amortiza.\n\n| | Lineal | Binaria |\n|---|---|---|\n| Requiere orden | No | Sí |\n| Tiempo | O(n) | O(log n) |\n| Espacio extra | O(1) | O(1) iterativa |\n| Aplica a | Cualquier colección | Solo colección ordenada |\n\n```mermaid\nflowchart TB\n  start[Buscar objetivo en array]\n  start --> orden{Esta ordenado}\n  orden -- No --> lineal[Busqueda lineal - O-n]\n  orden -- Si --> binaria[Busqueda binaria - O-log-n]\n  binaria --> mid[Comparar con el medio]\n  mid --> found[Encontrado]\n  mid --> left[Descartar mitad derecha]\n  mid --> right[Descartar mitad izquierda]\n```\n\n## Ejemplo\n\n```python\n# Busqueda lineal\ndef lineal(arr, objetivo):\n    for i, v in enumerate(arr):\n        if v == objetivo:\n            return i\n    return -1\n\n# Busqueda binaria (array ordenado)\ndef binaria(arr, objetivo):\n    izq, der = 0, len(arr) - 1\n    while izq <= der:\n        mid = (izq + der) // 2\n        if arr[mid] == objetivo:\n            return mid\n        elif arr[mid] < objetivo:\n            izq = mid + 1\n        else:\n            der = mid - 1\n    return -1\n```\n\n💡 **En la entrevista:** cuando el problema menciona \"arreglo ordenado\" o \"encontrar el primer/último que cumple X\", pensá en búsqueda binaria. El truco es definir bien el invariante de los punteros izq/der.",
+      "cards": [
+        {
+          "id": "algo-busqueda-1",
+          "front": "¿Cuál es la complejidad de la búsqueda lineal y cuándo la usás?",
+          "back": "O(n). La usás cuando el arreglo no está ordenado o cuando solo buscás un elemento una vez.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-busqueda-2",
+          "front": "¿Cuál es el requisito para usar búsqueda binaria?",
+          "back": "El arreglo debe estar ordenado. Sin orden, no podés descartar mitades.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-busqueda-3",
+          "front": "¿Por qué la búsqueda binaria es O(log n)?",
+          "back": "Cada paso descarta la mitad del espacio de búsqueda. En k pasos quedan n/2ᵏ elementos. Cuando n/2ᵏ = 1, k = log₂(n).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-busqueda-4",
+          "front": "¿Cuántas comparaciones necesita la búsqueda binaria para 1.000.000 de elementos?",
+          "back": "Como máximo ~20 comparaciones, porque log₂(1.000.000) ≈ 20.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-busqueda-5",
+          "front": "¿Cuándo conviene pagar el costo de ordenar para poder usar búsqueda binaria?",
+          "back": "Cuando vas a buscar muchas veces. El costo de ordenar (O(n log n)) se amortiza en múltiples búsquedas O(log n).",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "algo-sort-basico",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Ordenamiento básico",
+      "summary": "Bubble, selection, insertion: simples pero O(n²).",
+      "added": "2026-06-09",
+      "body": "Los algoritmos de ordenamiento básicos son fáciles de entender y de codear, pero todos tienen **complejidad O(n²)** en el peor caso. Se usan para listas chicas o para entender los fundamentos del ordenamiento.\n\n**Bubble sort** compara pares adyacentes y los intercambia si están en el orden equivocado, repitiendo hasta que no haya intercambios. El valor más grande \"burbujea\" hacia el final en cada pasada.\n\n**Selection sort** busca el mínimo en el sub-arreglo sin ordenar y lo coloca al principio. Hace exactamente n-1 swaps, lo que puede ser útil si las escrituras son costosas.\n\n**Insertion sort** toma un elemento a la vez e inserta en la posición correcta dentro del sub-arreglo ya ordenado, desplazando los mayores. Es **O(n)** cuando el arreglo está casi ordenado, y es el algoritmo que usan los sort de lenguajes para listas pequeñas.\n\n| Algoritmo | Mejor caso | Caso promedio | Peor caso | Estable |\n|---|---|---|---|---|\n| Bubble sort | O(n) | O(n²) | O(n²) | Sí |\n| Selection sort | O(n²) | O(n²) | O(n²) | No |\n| Insertion sort | O(n) | O(n²) | O(n²) | Sí |\n\n```mermaid\nflowchart LR\n  A[Array desordenado] --> B[Bubble - flota el maximo]\n  A --> C[Selection - busca el minimo]\n  A --> D[Insertion - inserta en posicion]\n  B --> E[Array ordenado]\n  C --> E\n  D --> E\n```\n\n## Ejemplo\n\n```python\n# Insertion sort (el mas util de los tres)\ndef insertion_sort(arr):\n    for i in range(1, len(arr)):\n        clave = arr[i]\n        j = i - 1\n        while j >= 0 and arr[j] > clave:\n            arr[j + 1] = arr[j]  # desplaza hacia la derecha\n            j -= 1\n        arr[j + 1] = clave       # inserta en su lugar\n    return arr\n\nprint(insertion_sort([5, 2, 4, 1, 3]))  # [1, 2, 3, 4, 5]\n```\n\n💡 **En la entrevista:** no implementes bubble sort para datos reales. Mencionalo para demostrar que conocés los fundamentos, pero explicá que en producción usarías merge sort o el sort del lenguaje.",
+      "cards": [
+        {
+          "id": "algo-sort-basico-1",
+          "front": "¿Cuál es la complejidad de bubble, selection e insertion sort en el peor caso?",
+          "back": "O(n²) para los tres. Por eso no se usan con arreglos grandes.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-sort-basico-2",
+          "front": "¿Cuál es el mejor caso de insertion sort y por qué?",
+          "back": "O(n), cuando el arreglo ya está ordenado: el while interno nunca ejecuta y solo recorre una vez.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-sort-basico-3",
+          "front": "¿Qué hace bubble sort en cada pasada?",
+          "back": "Compara pares adyacentes y los intercambia si están en el orden equivocado. El máximo \"burbujea\" al final.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-sort-basico-4",
+          "front": "¿Por qué selection sort puede ser útil si las escrituras son costosas?",
+          "back": "Hace exactamente n-1 swaps, que es el mínimo posible para un sort basado en comparaciones.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-sort-basico-5",
+          "front": "¿Qué significa que un algoritmo de sort sea estable?",
+          "back": "Que elementos iguales mantienen su orden relativo original después de ordenar.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "algo-sort-eficiente",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Ordenamiento eficiente",
+      "summary": "Merge sort, quicksort, heap sort: O(n log n).",
+      "added": "2026-06-09",
+      "body": "Los algoritmos eficientes logran **O(n log n)**, que es el límite teórico inferior para cualquier sort basado en comparaciones. Los tres más importantes son merge sort, quicksort y heap sort.\n\n**Merge sort** divide el arreglo en mitades recursivamente hasta tener sub-arreglos de 1 elemento, luego los **fusiona** en orden. Es **estable** y garantiza O(n log n) en todos los casos. Usa O(n) espacio extra para los sub-arreglos temporales.\n\n**Quicksort** elige un **pivote** y particiona el arreglo: menores al pivote a la izquierda, mayores a la derecha. Luego ordena recursivamente cada mitad. Promedio O(n log n), pero peor caso O(n²) si el pivote siempre cae en un extremo. En la práctica es el más rápido por constantes bajas y cache-friendly.\n\n**Heap sort** usa un heap para extraer el máximo en O(log n) repetidamente. O(n log n) garantizado, O(1) espacio extra. Menos usado en práctica por constantes más altas.\n\n| Algoritmo | Mejor | Promedio | Peor | Espacio | Estable |\n|---|---|---|---|---|---|\n| Merge sort | O(n log n) | O(n log n) | O(n log n) | O(n) | Sí |\n| Quicksort | O(n log n) | O(n log n) | O(n²) | O(log n) | No |\n| Heap sort | O(n log n) | O(n log n) | O(n log n) | O(1) | No |\n\n```mermaid\nflowchart TB\n  arr[Array desordenado]\n  arr --> merge[Merge sort - divide y fusiona]\n  arr --> quick[Quicksort - pivote y particiona]\n  arr --> heap[Heap sort - extrae maximo del heap]\n  merge --> result[O-n-log-n garantizado]\n  quick --> result2[O-n-log-n promedio]\n  heap --> result3[O-n-log-n garantizado O-1 espacio]\n```\n\n## Ejemplo\n\n```python\n# Merge sort\ndef merge_sort(arr):\n    if len(arr) <= 1:\n        return arr\n    mid = len(arr) // 2\n    izq = merge_sort(arr[:mid])\n    der = merge_sort(arr[mid:])\n    return merge(izq, der)\n\ndef merge(izq, der):\n    result = []\n    i = j = 0\n    while i < len(izq) and j < len(der):\n        if izq[i] <= der[j]:\n            result.append(izq[i]); i += 1\n        else:\n            result.append(der[j]); j += 1\n    return result + izq[i:] + der[j:]\n```\n\n💡 **En la entrevista:** Python usa **Timsort** (merge sort + insertion sort adaptivo), Java usa merge sort para objetos y quicksort para primitivos. Conocé las garantías de tu lenguaje antes de la entrevista.",
+      "cards": [
+        {
+          "id": "algo-sort-eficiente-1",
+          "front": "¿Cuál es el límite inferior teórico de cualquier sort basado en comparaciones?",
+          "back": "O(n log n). Ningún algoritmo que solo compare elementos puede hacerlo más rápido en el caso general.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-sort-eficiente-2",
+          "front": "¿Cuál es el peor caso de quicksort y cuándo ocurre?",
+          "back": "O(n²), cuando el pivote siempre cae en un extremo (ej: arreglo ya ordenado con pivote = primer elemento).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-sort-eficiente-3",
+          "front": "¿Qué ventaja tiene merge sort sobre quicksort?",
+          "back": "Garantiza O(n log n) en todos los casos y es estable. Quicksort es más rápido en promedio pero tiene peor caso O(n²).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-sort-eficiente-4",
+          "front": "¿Qué sort usa Python internamente y cómo funciona?",
+          "back": "Timsort: combinación de merge sort e insertion sort. Detecta sub-secuencias ya ordenadas (runs) y las fusiona.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-sort-eficiente-5",
+          "front": "¿Qué ventaja tiene heap sort respecto a merge sort en espacio?",
+          "back": "Heap sort usa O(1) espacio extra (in-place). Merge sort necesita O(n) para los sub-arreglos temporales.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "algo-divide-conquista",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Divide y conquista",
+      "summary": "Dividir el problema, resolver partes, combinar.",
+      "added": "2026-06-09",
+      "body": "**Divide y conquista** es un paradigma de diseño de algoritmos con tres pasos: **Dividir** el problema en sub-problemas más pequeños del mismo tipo, **Conquistar** resolviendo cada sub-problema (recursivamente o directamente si es pequeño), y **Combinar** las soluciones parciales para obtener la solución completa.\n\nLa clave es que los **sub-problemas son independientes**: resolverlos no afecta a los demás. Esto lo diferencia de la programación dinámica, donde los sub-problemas se solapan y se reusan.\n\nLa complejidad se analiza con el **Teorema Maestro**: si dividís en `a` sub-problemas de tamaño `n/b` y combinar cuesta O(n^d), la complejidad total depende de la relación entre `a`, `b` y `d`. Para merge sort: a=2, b=2, d=1 → O(n log n).\n\nEjemplos clásicos: merge sort, quicksort, búsqueda binaria, multiplicación de matrices (Strassen), y el algoritmo de multiplicación de enteros grandes (Karatsuba).\n\n```mermaid\nflowchart TB\n  P[Problema grande]\n  P --> D[Dividir en sub-problemas]\n  D --> S1[Sub-problema 1]\n  D --> S2[Sub-problema 2]\n  S1 --> R1[Resultado 1]\n  S2 --> R2[Resultado 2]\n  R1 --> C[Combinar]\n  R2 --> C\n  C --> Sol[Solucion final]\n```\n\n## Ejemplo\n\n```python\n# Busqueda binaria: divide en 2, conquista la mitad relevante, no necesita combinar\ndef binaria_dc(arr, objetivo, izq, der):\n    if izq > der:\n        return -1\n    mid = (izq + der) // 2\n    if arr[mid] == objetivo:\n        return mid\n    elif arr[mid] < objetivo:\n        return binaria_dc(arr, objetivo, mid + 1, der)  # solo la mitad derecha\n    else:\n        return binaria_dc(arr, objetivo, izq, mid - 1)  # solo la mitad izquierda\n\narr = [1, 3, 5, 7, 9, 11]\nprint(binaria_dc(arr, 7, 0, len(arr)-1))  # -> 3\n```\n\n💡 **En la entrevista:** si ves que el problema se puede partir en sub-partes iguales e independientes, pensá en divide y conquista. La señal más clara es cuando la solución óptima de la parte no depende de qué pasó en la otra.",
+      "cards": [
+        {
+          "id": "algo-divide-conquista-1",
+          "front": "¿Cuáles son los tres pasos de divide y conquista?",
+          "back": "Dividir el problema en sub-problemas, Conquistar (resolver cada uno), Combinar las soluciones parciales.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-divide-conquista-2",
+          "front": "¿Qué diferencia a divide y conquista de la programación dinámica?",
+          "back": "En divide y conquista los sub-problemas son independientes. En DP se solapan y se reusan resultados previos.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-divide-conquista-3",
+          "front": "¿Qué explica el Teorema Maestro?",
+          "back": "La complejidad de algoritmos recursivos que dividen en a sub-problemas de tamaño n/b con costo de combinación O(n^d).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-divide-conquista-4",
+          "front": "Nombrá tres algoritmos clásicos que usan divide y conquista.",
+          "back": "Merge sort, quicksort y búsqueda binaria. También Strassen (matrices) y Karatsuba (enteros grandes).",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "algo-dos-punteros",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Dos punteros y ventana deslizante",
+      "summary": "Reducir O(n²) a O(n) con dos índices.",
+      "added": "2026-06-09",
+      "body": "La técnica de **dos punteros** usa dos índices que recorren un arreglo (generalmente desde extremos opuestos o en la misma dirección) para evitar el loop anidado y bajar de O(n²) a **O(n)**. Requiere que el arreglo esté ordenado cuando los punteros convergen desde los extremos.\n\nLa **ventana deslizante** es una variante: dos punteros `izq` y `der` definen una ventana que se expande o contrae sobre una cadena o arreglo. Se usa para problemas de subarreglo/subcadena: \"el máximo de una ventana de tamaño k\", \"la subcadena más larga sin repetir\", etc. La ventana crece sumando `der` y se contrae moviendo `izq`. Costo: **O(n)**.\n\nLa diferencia clave: dos punteros convergen → ventana deslizante expande/contrae. Ambas técnicas convierten una búsqueda cuadrática en lineal cuando hay una **propiedad monótona** que explotar (ej: la suma crece al agrandar la ventana).\n\n```mermaid\nflowchart LR\n  A[Array ordenado]\n  A --> B[Puntero izq al inicio]\n  A --> C[Puntero der al final]\n  B --> D{Suma igual al objetivo}\n  C --> D\n  D -- Menor --> E[Mover izq hacia adelante]\n  D -- Mayor --> F[Mover der hacia atras]\n  D -- Igual --> G[Solucion encontrada]\n```\n\n## Ejemplo\n\n```python\n# Dos punteros convergentes: dos numeros que suman el objetivo (array ordenado)\ndef dos_suma(arr, objetivo):\n    izq, der = 0, len(arr) - 1\n    while izq < der:\n        s = arr[izq] + arr[der]\n        if s == objetivo:\n            return (izq, der)\n        elif s < objetivo:\n            izq += 1\n        else:\n            der -= 1\n    return None\n\n# Ventana deslizante: suma maxima de sub-array de tamano k\ndef max_suma_ventana(arr, k):\n    ventana = sum(arr[:k])\n    maximo = ventana\n    for i in range(k, len(arr)):\n        ventana += arr[i] - arr[i - k]  # entra el nuevo, sale el viejo\n        maximo = max(maximo, ventana)\n    return maximo\n```\n\n💡 **En la entrevista:** keywords que delatan ventana deslizante: \"subarray contiguo\", \"subcadena\", \"máximo/mínimo de tamaño k\", \"sin repetir\". Keywords de dos punteros: \"par que cumple condición\", \"palíndromo\", \"merge de dos arreglos ordenados\".",
+      "cards": [
+        {
+          "id": "algo-dos-punteros-1",
+          "front": "¿Qué complejidad logra la técnica de dos punteros y por qué mejora sobre el enfoque ingenuo?",
+          "back": "O(n). Evita el loop anidado O(n²) usando dos índices que avanzan en una sola pasada.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-dos-punteros-2",
+          "front": "¿Qué condición requiere la técnica de dos punteros convergentes?",
+          "back": "Que el arreglo esté ordenado, para que mover un puntero tenga un efecto predecible (suma sube o baja).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-dos-punteros-3",
+          "front": "¿Cuál es la diferencia entre dos punteros y ventana deslizante?",
+          "back": "Dos punteros convergen desde extremos opuestos. Ventana deslizante expande (der) y contrae (izq) desde el mismo lado.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-dos-punteros-4",
+          "front": "Nombrá tres keywords en el enunciado que sugieren ventana deslizante.",
+          "back": "\"Subarray contiguo\", \"subcadena más larga/corta\", \"máximo/mínimo de tamaño k\", \"sin repetir\".",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-dos-punteros-5",
+          "front": "¿Cómo actualiza la suma una ventana deslizante de tamaño fijo k al avanzar un paso?",
+          "back": "suma += arr[der] - arr[der - k]: suma el elemento que entra y resta el que sale. O(1) por paso.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "algo-prefix-sum",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Prefix sum (sumas de prefijo)",
+      "summary": "Pre-calcular sumas para queries O(1).",
+      "added": "2026-06-09",
+      "body": "El **prefix sum** (suma de prefijo) es un arreglo auxiliar donde `prefix[i]` contiene la suma de todos los elementos desde el índice 0 hasta i. Se construye una sola vez en **O(n)** y luego permite responder cualquier query de suma de rango `[l, r]` en **O(1)**.\n\nLa fórmula clave: `suma(l, r) = prefix[r] - prefix[l - 1]`. Sin prefix sum, cada query de rango tomaría O(n). Con prefix sum: O(1) por query tras O(n) de pre-cómputo. Si tenés muchas queries sobre el mismo arreglo, el ahorro es enorme.\n\nEs un patrón fundamental que aparece en problemas de subarreglos, diferencia de arreglos, y como bloque de construcción para algoritmos más complejos. También existe en **2D** para matrices: permite calcular sumas de subrectángulos en O(1).\n\n```mermaid\nflowchart TB\n  arr[Array original - 3-1-4-1-5]\n  arr --> build[Construir prefix en O-n]\n  build --> prefix[prefix - 0-3-4-8-9-14]\n  prefix --> query[Query suma de rango l-r en O-1]\n  query --> formula[Resultado - prefix-r menos prefix-l-1]\n```\n\n## Ejemplo\n\n```python\ndef construir_prefix(arr):\n    prefix = [0] * (len(arr) + 1)  # prefix[0] = 0 como centinela\n    for i in range(len(arr)):\n        prefix[i + 1] = prefix[i] + arr[i]\n    return prefix\n\ndef suma_rango(prefix, l, r):\n    # suma desde indice l hasta r (inclusive, 0-indexed)\n    return prefix[r + 1] - prefix[l]\n\narr = [3, 1, 4, 1, 5, 9, 2]\nprefix = construir_prefix(arr)\nprint(suma_rango(prefix, 1, 4))  # 1+4+1+5 = 11\nprint(suma_rango(prefix, 0, 6))  # suma total = 25\n```\n\n💡 **En la entrevista:** si ves \"múltiples queries de suma sobre subarreglos\" o \"conteo de subarreglos que cumplen X\", prefix sum es casi siempre la clave. El centinela `prefix[0] = 0` evita el caso especial cuando `l = 0`.",
+      "cards": [
+        {
+          "id": "algo-prefix-sum-1",
+          "front": "¿Qué guarda prefix[i] en un arreglo de sumas de prefijo?",
+          "back": "La suma acumulada de todos los elementos desde el índice 0 hasta i (inclusive).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-prefix-sum-2",
+          "front": "¿Cuál es la fórmula para calcular la suma del rango [l, r] usando prefix sum?",
+          "back": "suma(l, r) = prefix[r] - prefix[l - 1]. Con el centinela en 0: prefix[r+1] - prefix[l].",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-prefix-sum-3",
+          "front": "¿Cuáles son los costos de construcción y de cada query con prefix sum?",
+          "back": "Construcción O(n). Cada query de suma de rango O(1). Ideal cuando hay muchas queries sobre el mismo arreglo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-prefix-sum-4",
+          "front": "¿Para qué sirve el centinela prefix[0] = 0?",
+          "back": "Evita el caso especial cuando l = 0. Hace que la fórmula prefix[r+1] - prefix[l] funcione uniformemente.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-prefix-sum-5",
+          "front": "¿Qué keywords en el enunciado sugieren usar prefix sum?",
+          "back": "\"Múltiples queries de suma\", \"suma de subarreglo\", \"conteo de subarreglos que suman X\", \"diferencia de rangos\".",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "algo-backtracking",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Backtracking básico",
+      "summary": "Explorar todas las opciones, deshacer y seguir.",
+      "added": "2026-06-09",
+      "body": "**Backtracking** es una técnica recursiva para explorar todas las combinaciones posibles de decisiones. En cada paso se **elige** una opción, se **explora** recursivamente, y si no lleva a una solución válida se **deshace** (backtrack) y se prueba la siguiente opción.\n\nEl patrón de código es siempre el mismo: una función `backtrack(estado, resultado)` que: (1) verifica el **caso base** (solución completa o sin opciones válidas), (2) itera sobre las **opciones disponibles**, (3) **elige** una, llama recursivamente, y luego **deshace** la elección.\n\nBacktracking resuelve problemas donde hay que enumerar o buscar entre muchas combinaciones: permutaciones, combinaciones, subconjuntos, resolución de sudoku, N-reinas. La complejidad suele ser exponencial O(n!) o O(2ⁿ) en el peor caso, pero las **podas** (pruning) eliminan ramas inválidas temprano y reducen el tiempo real.\n\n```mermaid\nflowchart TB\n  start[Estado inicial]\n  start --> op1[Elegir opcion 1]\n  start --> op2[Elegir opcion 2]\n  op1 --> r1{Es valido}\n  r1 -- Si --> deep1[Explorar mas profundo]\n  r1 -- No --> back1[Backtrack - deshacer]\n  back1 --> op2\n  op2 --> r2{Es valido}\n  r2 -- Si --> sol[Solucion encontrada]\n```\n\n## Ejemplo\n\n```python\n# Generar todas las permutaciones de una lista\ndef permutaciones(nums):\n    resultado = []\n\n    def backtrack(actual, restantes):\n        if not restantes:           # caso base: no quedan elementos\n            resultado.append(actual[:])\n            return\n        for i in range(len(restantes)):\n            actual.append(restantes[i])          # elegir\n            backtrack(actual, restantes[:i] + restantes[i+1:])  # explorar\n            actual.pop()                          # deshacer (backtrack)\n\n    backtrack([], nums)\n    return resultado\n\nprint(permutaciones([1, 2, 3]))  # [[1,2,3], [1,3,2], [2,1,3], ...]\n```\n\n💡 **En la entrevista:** siempre identificá cuándo podés **podar** ramas. Si en el paso actual ya superaste el objetivo (ej: suma > target), no tiene sentido seguir. Esa poda puede bajar el tiempo real de forma drástica aunque Big-O no cambie.",
+      "cards": [
+        {
+          "id": "algo-backtracking-1",
+          "front": "¿Cuáles son los tres pasos del patrón backtracking?",
+          "back": "Elegir una opción, Explorar recursivamente, Deshacer (backtrack) si no lleva a solución.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-backtracking-2",
+          "front": "¿Cuál es la complejidad típica de backtracking y por qué?",
+          "back": "O(n!) para permutaciones o O(2ⁿ) para subconjuntos, porque en el peor caso explora todas las combinaciones posibles.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-backtracking-3",
+          "front": "¿Qué es una poda (pruning) en backtracking?",
+          "back": "Abandonar una rama de exploración temprano cuando ya se sabe que no puede llevar a una solución válida. Reduce el tiempo real.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-backtracking-4",
+          "front": "Nombrá tres problemas clásicos que se resuelven con backtracking.",
+          "back": "Permutaciones, combinaciones, subconjuntos (subset sum), N-reinas, resolución de sudoku.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-backtracking-5",
+          "front": "¿Cuándo el backtracking genera permutaciones vs combinaciones?",
+          "back": "Permutaciones: importa el orden, no se puede repetir índice. Combinaciones: no importa el orden, se avanza el índice de inicio.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "algo-greedy",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Algoritmos greedy",
+      "summary": "Elegir siempre la mejor opción local.",
+      "added": "2026-06-09",
+      "body": "Un **algoritmo greedy (codicioso)** toma en cada paso la decisión localmente óptima, sin revisar decisiones pasadas ni anticipar consecuencias futuras. Es simple y eficiente, pero **no siempre da la solución globalmente óptima**.\n\nPara que greedy funcione, el problema debe tener dos propiedades: **subestructura óptima** (la solución óptima del total contiene soluciones óptimas de subproblemas) y la **propiedad greedy** (elegir la opción localmente óptima lleva a la solución globalmente óptima). Demostrar que estas propiedades valen requiere proof; en la entrevista, identificar el patrón suele ser suficiente.\n\nEjemplos clásicos donde greedy funciona: problema del cambio (monedas de denominaciones canónicas), selección de actividades (elegir la que termina antes), algoritmo de Huffman (compresión), Dijkstra (camino más corto con pesos positivos). Contraejemplo: el cambio con monedas no canónicas puede fallar con greedy y requiere DP.\n\n```mermaid\nflowchart LR\n  start[Estado inicial]\n  start --> eval[Evaluar todas las opciones disponibles]\n  eval --> best[Elegir la localmente optima]\n  best --> advance[Avanzar al siguiente estado]\n  advance --> done{Problema resuelto}\n  done -- No --> eval\n  done -- Si --> result[Solucion greedy]\n```\n\n## Ejemplo\n\n```python\n# Seleccion de actividades: maximizar actividades sin solapamiento\n# Greedy: elegir siempre la que termina antes\ndef max_actividades(actividades):\n    # actividades = [(inicio, fin), ...]\n    actividades.sort(key=lambda x: x[1])  # ordenar por fin\n    seleccionadas = [actividades[0]]\n    ultimo_fin = actividades[0][1]\n\n    for inicio, fin in actividades[1:]:\n        if inicio >= ultimo_fin:       # no se solapa\n            seleccionadas.append((inicio, fin))\n            ultimo_fin = fin\n\n    return seleccionadas\n\nacts = [(1,4), (3,5), (0,6), (5,7), (3,9), (5,9), (6,10)]\nprint(max_actividades(acts))  # [(1,4), (5,7), (6,10)] o similar\n```\n\n💡 **En la entrevista:** la señal de greedy es que el problema se puede ordenar por algún criterio (tiempo de fin, costo, ganancia) y la elección local no bloquea futuras buenas opciones. Si el greedy falla en algún ejemplo que construyas a mano, necesitás DP.",
+      "cards": [
+        {
+          "id": "algo-greedy-1",
+          "front": "¿Qué caracteriza a un algoritmo greedy?",
+          "back": "Elige en cada paso la opción localmente óptima sin revisar decisiones pasadas ni anticipar el futuro.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-greedy-2",
+          "front": "¿Cuáles son las dos propiedades que garantizan que greedy da la solución óptima?",
+          "back": "Subestructura óptima (el todo contiene óptimos locales) y propiedad greedy (la elección local lleva al óptimo global).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-greedy-3",
+          "front": "Nombrá un caso donde greedy falla y cómo darse cuenta.",
+          "back": "El cambio de monedas con denominaciones no canónicas (ej: monedas 1, 3, 4 → greedy falla para 6). Si encontrás un contraejemplo a mano, necesitás DP.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-greedy-4",
+          "front": "¿Qué criterio greedy maximiza la cantidad de actividades sin solapamiento?",
+          "back": "Elegir siempre la actividad que termina antes (sort por tiempo de fin). Deja más espacio para las siguientes.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-greedy-5",
+          "front": "¿Cuál es la señal más clara de que un problema se resuelve con greedy?",
+          "back": "Se puede ordenar por algún criterio y la elección local no bloquea futuras buenas opciones. El greedy no falla en ejemplos construidos a mano.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "algo-dp-intro",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Programación dinámica: introducción",
+      "summary": "Memoización vs tabulación para sub-problemas solapados.",
+      "added": "2026-06-09",
+      "body": "La **programación dinámica (DP)** resuelve problemas dividiéndolos en **sub-problemas solapados** y guardando sus resultados para no recalcularlos. Es la diferencia entre O(2ⁿ) y O(n) en muchos problemas.\n\nExisten dos enfoques: **memoización (top-down)** arranca desde la solución completa, resuelve recursivamente, y guarda cada resultado en un diccionario/array para reusar. **Tabulación (bottom-up)** construye la solución desde los sub-problemas más pequeños en un array, sin recursión. Ambos dan la misma complejidad, pero tabulación evita el overhead del call stack.\n\nUn problema tiene **estructura de DP** cuando: (1) tiene **subestructura óptima** (solución óptima se construye desde sub-soluciones óptimas) y (2) los sub-problemas se **solapan** (se calculan repetidamente). Fibonacci es el ejemplo mínimo: fib(5) llama a fib(4) y fib(3), y fib(4) vuelve a llamar fib(3) — ese solapamiento es lo que DP elimina.\n\n| Enfoque | Dirección | Recursión | Uso de stack |\n|---|---|---|---|\n| Memoización (top-down) | Grande → pequeño | Sí | Sí |\n| Tabulación (bottom-up) | Pequeño → grande | No | No |\n\n```mermaid\nflowchart TB\n  prob[Problema grande]\n  prob --> overlap{Sub-problemas solapados}\n  overlap -- Si --> dp[Programacion dinamica]\n  overlap -- No --> dc[Divide y conquista]\n  dp --> memo[Memoizacion - top-down]\n  dp --> tabla[Tabulacion - bottom-up]\n  memo --> cache[Guardar en dict al resolver]\n  tabla --> fill[Llenar tabla desde casos base]\n```\n\n## Ejemplo\n\n```python\n# Fibonacci: sin DP es O(2^n), con DP es O(n)\n\n# Memoizacion (top-down)\ndef fib_memo(n, memo={}):\n    if n <= 1:\n        return n\n    if n not in memo:\n        memo[n] = fib_memo(n-1, memo) + fib_memo(n-2, memo)\n    return memo[n]\n\n# Tabulacion (bottom-up)\ndef fib_tabla(n):\n    if n <= 1:\n        return n\n    dp = [0] * (n + 1)\n    dp[1] = 1\n    for i in range(2, n + 1):\n        dp[i] = dp[i-1] + dp[i-2]\n    return dp[n]\n\nprint(fib_memo(10))   # 55\nprint(fib_tabla(10))  # 55\n```\n\n💡 **En la entrevista:** la señal más fuerte de DP es cuando el backtracking naive tiene muchas llamadas redundantes. Si dibujás el árbol de recursión y ves el mismo sub-problema múltiples veces, la respuesta es memoización. Si necesitás optimizar espacio también, pasá a tabulación.",
+      "cards": [
+        {
+          "id": "algo-dp-intro-1",
+          "front": "¿Cuáles son las dos condiciones que debe cumplir un problema para resolverse con DP?",
+          "back": "Subestructura óptima (la solución total se construye desde sub-soluciones óptimas) y sub-problemas solapados (se calculan repetidamente).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-dp-intro-2",
+          "front": "¿Cuál es la diferencia entre memoización y tabulación?",
+          "back": "Memoización (top-down): recursivo, guarda resultados al calcularlos. Tabulación (bottom-up): iterativo, llena tabla desde casos base sin recursión.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-dp-intro-3",
+          "front": "¿Por qué Fibonacci sin DP es O(2ⁿ) y con DP es O(n)?",
+          "back": "Sin DP se recalcula el mismo fib(k) exponencialmente. Con DP se calcula una sola vez y se reutiliza.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-dp-intro-4",
+          "front": "¿Qué ventaja tiene tabulación sobre memoización?",
+          "back": "Evita el overhead del call stack recursivo y puede optimizarse para usar O(1) de espacio cuando solo se necesitan los últimos valores.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-dp-intro-5",
+          "front": "¿Cómo identificás que un problema necesita DP en una entrevista?",
+          "back": "El backtracking naive tiene muchas llamadas redundantes. Al dibujar el árbol de recursión, el mismo sub-problema aparece múltiples veces.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "algo-camino-corto",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Grafos: camino más corto",
+      "summary": "BFS sin peso y la idea de Dijkstra con peso.",
+      "added": "2026-06-09",
+      "body": "El **camino más corto** entre dos nodos de un grafo depende de si las aristas tienen **peso** (costo) o no. En grafos **sin peso** (o con peso uniforme), **BFS** (breadth-first search) garantiza el camino más corto porque explora nivel a nivel: todos los nodos a distancia 1, luego 2, etc. La primera vez que alcanza el destino, ya encontró el camino mínimo. Complejidad: **O(V + E)**.\n\nEn grafos con **pesos positivos**, BFS no alcanza: podría haber un camino más largo en nodos pero de menor costo. Para eso existe **Dijkstra**: usa una **min-heap** (cola de prioridad) y siempre procesa el nodo con menor distancia acumulada primero. Complejidad con min-heap: **O((V + E) log V)**.\n\nDijkstra **no funciona con pesos negativos** (para eso existe Bellman-Ford). En la práctica, BFS resuelve laberintos, puzzle de 8 piezas, redes sociales (grados de separación). Dijkstra resuelve GPS, redes de telecomunicación, rutas de paquetes.\n\n| Algoritmo | Pesos | Complejidad | Estructura clave |\n|---|---|---|---|\n| BFS | Sin peso | O(V+E) | Cola (queue) |\n| Dijkstra | Pesos positivos | O((V+E) log V) | Min-heap |\n| Bellman-Ford | Pesos negativos | O(V*E) | Array de distancias |\n\n```mermaid\nflowchart TB\n  grafo[Grafo con origen y destino]\n  grafo --> peso{Tiene pesos en aristas}\n  peso -- No --> bfs[BFS - cola FIFO]\n  peso -- Si positivos --> dijk[Dijkstra - min-heap]\n  peso -- Si negativos --> bf[Bellman-Ford]\n  bfs --> dist[Distancia en saltos]\n  dijk --> dist2[Distancia en costo minimo]\n```\n\n## Ejemplo\n\n```python\nfrom collections import deque\n\n# BFS para camino mas corto en grafo no ponderado\ndef bfs_camino(grafo, origen, destino):\n    visitados = {origen}\n    cola = deque([(origen, [origen])])\n\n    while cola:\n        nodo, camino = cola.popleft()\n        if nodo == destino:\n            return camino\n        for vecino in grafo[nodo]:\n            if vecino not in visitados:\n                visitados.add(vecino)\n                cola.append((vecino, camino + [vecino]))\n    return None\n\ngrafo = {'A': ['B','C'], 'B': ['A','D'], 'C': ['A','D'], 'D': ['B','C']}\nprint(bfs_camino(grafo, 'A', 'D'))  # ['A', 'B', 'D'] o ['A', 'C', 'D']\n```\n\n💡 **En la entrevista:** BFS es suficiente para \"mínima cantidad de pasos/movimientos\". Cuando el enunciado dice \"costo mínimo\" o \"distancia con pesos\", pensá Dijkstra con `heapq`. Siempre marcá los nodos como visitados antes de encolarlos, no después, para evitar duplicados.",
+      "cards": [
+        {
+          "id": "algo-camino-corto-1",
+          "front": "¿Por qué BFS garantiza el camino más corto en grafos sin peso?",
+          "back": "Explora nivel a nivel: todos los nodos a distancia 1, luego 2, etc. La primera vez que llega al destino, ya es el camino mínimo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-camino-corto-2",
+          "front": "¿Por qué BFS no funciona para grafos con pesos?",
+          "back": "Un camino con más saltos podría tener menor costo. BFS trata todos los saltos como iguales.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-camino-corto-3",
+          "front": "¿Qué estructura de datos usa Dijkstra y por qué?",
+          "back": "Min-heap (cola de prioridad): siempre procesa el nodo con menor distancia acumulada primero, garantizando el camino óptimo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-camino-corto-4",
+          "front": "¿Cuál es la limitación de Dijkstra?",
+          "back": "No funciona con aristas de peso negativo. Para eso se usa Bellman-Ford, que tiene complejidad O(V*E).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-camino-corto-5",
+          "front": "¿Cuándo usás BFS y cuándo Dijkstra en una entrevista?",
+          "back": "BFS: mínima cantidad de pasos/movimientos (sin pesos). Dijkstra: costo mínimo con pesos positivos.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "algo-topo-sort",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Ordenamiento topológico",
+      "summary": "Orden de dependencias en un grafo dirigido acíclico.",
+      "added": "2026-06-09",
+      "body": "El **ordenamiento topológico** (topo sort) produce un orden lineal de los nodos de un **grafo dirigido acíclico (DAG)** tal que para toda arista u → v, u aparece antes que v. Si hay un ciclo, el ordenamiento topológico no existe.\n\nExisten dos algoritmos principales. **Kahn (BFS)**: calcula el **in-degree** (cantidad de aristas entrantes) de cada nodo, pone en una cola todos los nodos con in-degree 0, los va sacando de la cola y reduciendo el in-degree de sus vecinos; cuando un vecino llega a 0, se encola. Si al final no se procesaron todos los nodos, hay un **ciclo**. **DFS post-order**: hace DFS y agrega cada nodo a una pila al terminar de explorar sus vecinos; al final, la pila reversa es el orden topológico.\n\nAplicaciones reales: scheduling de tareas, compilación de dependencias, currículo de materias (prerequisito antes que la materia), Makefile. Complejidad: **O(V + E)** para ambos.\n\n```mermaid\nflowchart LR\n  A[Nodo A in-degree-0] --> C[Nodo C]\n  B[Nodo B in-degree-0] --> C\n  B --> D[Nodo D]\n  C --> E[Nodo E]\n  D --> E\n```\n\n## Ejemplo\n\n```python\nfrom collections import deque\n\n# Kahn - topological sort con deteccion de ciclos\ndef kahn(nodos, aristas):\n    # aristas = [(u, v), ...] significa u debe ir antes que v\n    in_degree = {n: 0 for n in nodos}\n    adyacencia = {n: [] for n in nodos}\n\n    for u, v in aristas:\n        adyacencia[u].append(v)\n        in_degree[v] += 1\n\n    cola = deque([n for n in nodos if in_degree[n] == 0])\n    orden = []\n\n    while cola:\n        nodo = cola.popleft()\n        orden.append(nodo)\n        for vecino in adyacencia[nodo]:\n            in_degree[vecino] -= 1\n            if in_degree[vecino] == 0:\n                cola.append(vecino)\n\n    if len(orden) != len(nodos):\n        return None  # hay un ciclo\n    return orden\n\nnodos = ['A', 'B', 'C', 'D']\naristas = [('A', 'C'), ('B', 'C'), ('B', 'D'), ('C', 'D')]\nprint(kahn(nodos, aristas))  # ['A', 'B', 'C', 'D'] o similar\n```\n\n💡 **En la entrevista:** el problema \"course schedule\" de LeetCode es el topo sort clásico. La detección de ciclo (si Kahn no procesa todos los nodos) es parte integral de la solución. Siempre aclará que el algoritmo aplica solo a DAGs.",
+      "cards": [
+        {
+          "id": "algo-topo-sort-1",
+          "front": "¿Qué garantiza el ordenamiento topológico?",
+          "back": "Para toda arista u → v, u aparece antes que v en el orden resultante. Solo es posible en DAGs (sin ciclos).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-topo-sort-2",
+          "front": "¿Cómo funciona el algoritmo de Kahn?",
+          "back": "Calcula in-degrees, encola nodos con in-degree 0, los procesa reduciendo in-degree de vecinos. Cuando un vecino llega a 0 se encola.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-topo-sort-3",
+          "front": "¿Cómo detecta el algoritmo de Kahn un ciclo?",
+          "back": "Si al terminar el orden tiene menos nodos que el grafo, hay un ciclo: esos nodos nunca llegaron a in-degree 0.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-topo-sort-4",
+          "front": "¿Cuál es la complejidad del ordenamiento topológico?",
+          "back": "O(V + E): cada nodo y cada arista se procesan exactamente una vez.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-topo-sort-5",
+          "front": "Nombrá tres aplicaciones reales del ordenamiento topológico.",
+          "back": "Scheduling de tareas con dependencias, compilación de módulos/Makefile, currículo de materias con prerequisitos.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "algo-topo-sort-6",
+          "front": "¿Qué diferencia hay entre el enfoque de Kahn y el DFS post-order para topo sort?",
+          "back": "Kahn usa BFS y cola, detecta ciclos naturalmente. DFS post-order apila nodos al terminar y revierte; requiere marcas de visita para ciclos.",
+          "added": "2026-06-09"
+        }
+      ]
+    }
+  ]
+}

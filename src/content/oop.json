@@ -2,7 +2,7 @@
   "lessons": [
     {
       "id": "oop-polimorfismo",
-      "level": "ssr",
+      "level": "jr",
       "area": "oop",
       "title": "POO y polimorfismo",
       "summary": "Misma interfaz, distintas implementaciones.",

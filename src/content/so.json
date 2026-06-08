@@ -1,0 +1,426 @@
+{
+  "lessons": [
+    {
+      "id": "so-proc-thread",
+      "level": "jr",
+      "area": "so",
+      "title": "Procesos vs hilos (threads)",
+      "summary": "Aislamiento vs memoria compartida.",
+      "added": "2026-06-09",
+      "body": "Un **proceso** es un programa en ejecución con su propio espacio de memoria aislado: código, datos, heap y stack son privados. Si un proceso muere, no arrastra a los demás. El SO lo gestiona a través del **PCB** (Process Control Block), que guarda el estado del proceso: registros, program counter, archivos abiertos.\n\nUn **hilo (thread)** vive dentro de un proceso y **comparte** su memoria con los otros hilos del mismo proceso: heap, variables globales y archivos abiertos. Cada hilo tiene su propio stack y registros. Son más baratos de crear que procesos porque no hay que duplicar memoria.\n\nLa ventaja de los hilos es velocidad de comunicación: no hace falta IPC (pipes, sockets). La desventaja: un hilo que corrompe memoria puede romper todo el proceso, y aparecen **race conditions** cuando dos hilos leen y escriben la misma variable sin sincronización.\n\n```mermaid\nflowchart TB\n  P[Proceso - espacio de memoria propio]\n  P --> T1[Thread 1 - stack propio]\n  P --> T2[Thread 2 - stack propio]\n  P --> MEM[Heap y datos compartidos]\n  T1 --> MEM\n  T2 --> MEM\n```\n\n## Ejemplo\n\n```python\nimport threading\n\ncontador = 0\n\ndef incrementar():\n    global contador\n    for _ in range(100000):\n        contador += 1  # sin lock: race condition\n\nt1 = threading.Thread(target=incrementar)\nt2 = threading.Thread(target=incrementar)\nt1.start()\nt2.start()\nt1.join()\nt2.join()\nprint(contador)  # probablemente NO es 200000\n```\n\n💡 **En la entrevista:** la pregunta clásica es \"¿por qué usarías un hilo en vez de un proceso?\" — la respuesta es: comunicación más rápida (memoria compartida) y menor overhead de creación. El costo es la necesidad de sincronización.",
+      "cards": [
+        {
+          "id": "so-proc-thread-1",
+          "front": "¿Qué diferencia clave hay entre proceso e hilo en cuanto a memoria?",
+          "back": "El proceso tiene su propio espacio de memoria aislado. Los hilos de un mismo proceso comparten el heap y las variables globales.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-proc-thread-2",
+          "front": "¿Qué es el PCB?",
+          "back": "Process Control Block: estructura del SO que guarda el estado de un proceso (registros, program counter, archivos abiertos, estado).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-proc-thread-3",
+          "front": "¿Qué tiene cada hilo de forma privada?",
+          "back": "Su propio stack y sus propios registros (incluido el program counter). El heap y datos globales los comparte con los demás hilos del proceso.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-proc-thread-4",
+          "front": "¿Por qué los hilos son más baratos de crear que los procesos?",
+          "back": "No hay que duplicar el espacio de memoria: comparten el espacio del proceso padre. Solo se crea un nuevo stack y contexto de registros.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-proc-thread-5",
+          "front": "¿Qué riesgo introduce usar hilos en lugar de procesos?",
+          "back": "Race conditions: si dos hilos acceden a la misma variable sin sincronización, el resultado es impredecible. Además, un hilo que corrompe memoria puede romper todo el proceso.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "so-proc-lifecycle",
+      "level": "jr",
+      "area": "so",
+      "title": "Ciclo de vida de un proceso",
+      "summary": "Los estados por los que pasa un proceso.",
+      "added": "2026-06-09",
+      "body": "Un proceso no siempre está ejecutándose. El SO lo mueve entre estados según los recursos disponibles y los eventos que ocurren. Conocer estos estados explica por qué un programa puede estar \"corriendo\" sin usar CPU.\n\nLos cinco estados clásicos son: **new** (se está creando), **ready** (listo para correr, esperando CPU), **running** (ejecutando instrucciones en la CPU), **blocked/waiting** (esperando un evento externo, como I/O) y **terminated** (terminó). El scheduler solo elige entre los procesos en estado **ready**.\n\nLa transición **running → blocked** es clave: cuando un proceso pide leer un archivo o esperar por red, **suelta la CPU voluntariamente**. El SO lo mueve a blocked y asigna la CPU a otro proceso ready. Cuando llega el dato (interrupción de I/O), el proceso vuelve a **ready** (no directo a running).\n\n```mermaid\nflowchart LR\n  new[new] --> ready[ready]\n  ready --> running[running]\n  running --> ready\n  running --> blocked[blocked - esperando IO]\n  blocked --> ready\n  running --> terminated[terminated]\n```\n\n## Ejemplo\n\n```bash\n# Ver estados de procesos en Linux\nps aux\n# Columna STAT: R=running/ready, S=sleeping/blocked, Z=zombie, T=stopped\n\n# Ver proceso bloqueado esperando I/O\nstrace -e trace=read cat /dev/stdin\n# El proceso queda en estado S (sleeping) hasta que escribis algo\n```\n\n💡 **En la entrevista:** la confusión común es creer que \"blocked\" y \"ready\" son lo mismo. La diferencia es que ready tiene todos los recursos menos la CPU; blocked está esperando un evento externo (I/O, semáforo, timer).",
+      "cards": [
+        {
+          "id": "so-proc-lifecycle-1",
+          "front": "¿Cuáles son los 5 estados clásicos de un proceso?",
+          "back": "new, ready, running, blocked (waiting), terminated.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-proc-lifecycle-2",
+          "front": "¿Cuál es la diferencia entre estado ready y estado blocked?",
+          "back": "Ready: el proceso tiene todo menos la CPU, espera turno del scheduler. Blocked: espera un evento externo (I/O, señal, semáforo), no puede correr aunque haya CPU libre.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-proc-lifecycle-3",
+          "front": "¿A qué estado pasa un proceso bloqueado cuando llega el evento que esperaba?",
+          "back": "Vuelve a ready, no directamente a running. El scheduler decide cuándo le asigna la CPU.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-proc-lifecycle-4",
+          "front": "¿Qué es un proceso zombie?",
+          "back": "Un proceso que terminó pero cuyo padre no leyó aún su código de salida. Ocupa entrada en la tabla de procesos hasta que el padre llama wait().",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-proc-lifecycle-5",
+          "front": "¿Qué hace el scheduler del SO?",
+          "back": "Elige qué proceso en estado ready recibe la CPU. No considera los blocked ni los new.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "so-scheduling",
+      "level": "jr",
+      "area": "so",
+      "title": "Scheduling de CPU",
+      "summary": "Cómo el SO reparte el tiempo de CPU.",
+      "added": "2026-06-09",
+      "body": "El **scheduler** decide qué proceso corre en la CPU y por cuánto tiempo. El objetivo es balancear **throughput** (procesos terminados por segundo), **latencia** (tiempo hasta que un proceso empieza) y **fairness** (que ninguno muera de hambre).\n\n**FCFS (First Come First Served)**: el primero que llegó corre hasta terminar. Simple, pero un proceso largo puede bloquear a todos los cortos — efecto convoy. No es preemptivo.\n\n**Round Robin (RR)**: cada proceso recibe un **quantum** de tiempo (ej. 10ms). Si no terminó, vuelve al final de la cola. Preemptivo y justo. El quantum importa: muy corto = demasiado overhead de context switch; muy largo = se parece a FCFS.\n\n**Scheduling por prioridad**: cada proceso tiene una prioridad numérica; corre el de mayor prioridad. Riesgo: **starvation** — un proceso de baja prioridad puede nunca correr si siempre llegan procesos de alta prioridad. Solución: **aging** (subir la prioridad de los que esperan mucho).\n\n```mermaid\nflowchart TB\n  cola[Cola de procesos ready]\n  cola --> sched[Scheduler]\n  sched --> fcfs[FCFS - orden de llegada]\n  sched --> rr[Round Robin - quantum fijo]\n  sched --> prio[Prioridad - mayor primero]\n  fcfs --> cpu[CPU]\n  rr --> cpu\n  prio --> cpu\n```\n\n## Ejemplo\n\n```bash\n# En Linux, ver prioridad (nice value) de procesos\nps -eo pid,ni,comm | head -10\n# nice va de -20 (maxima prioridad) a 19 (minima)\n\n# Bajar la prioridad de un proceso al correrlo\nnice -n 10 python3 mi_script.py\n\n# Cambiar prioridad de proceso ya corriendo\nrenice -n 5 -p 1234\n```\n\n💡 **En la entrevista:** Round Robin es el algoritmo más preguntado. Sabé explicar qué pasa si el quantum es muy chico (overhead de context switch domina) o muy grande (degenera en FCFS). Y la diferencia entre preemptivo (el SO puede sacar la CPU) y no preemptivo (el proceso la suelta solo).",
+      "cards": [
+        {
+          "id": "so-scheduling-1",
+          "front": "¿Qué problema tiene FCFS con procesos de distinta duración?",
+          "back": "Efecto convoy: un proceso largo bloquea a todos los cortos que llegaron después. El tiempo de espera promedio puede ser muy alto.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-scheduling-2",
+          "front": "¿Qué es el quantum en Round Robin?",
+          "back": "El tiempo máximo que un proceso puede usar la CPU antes de ser desalojado y volver al final de la cola.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-scheduling-3",
+          "front": "¿Qué pasa si el quantum de Round Robin es demasiado pequeño?",
+          "back": "El overhead de context switch (guardar y restaurar estado) domina sobre el trabajo real. El sistema pierde eficiencia.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-scheduling-4",
+          "front": "¿Qué es starvation en scheduling por prioridad?",
+          "back": "Un proceso de baja prioridad nunca recibe CPU porque siempre hay procesos de mayor prioridad listos. Solución: aging (aumentar su prioridad con el tiempo de espera).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-scheduling-5",
+          "front": "¿Cuál es la diferencia entre scheduling preemptivo y no preemptivo?",
+          "back": "Preemptivo: el SO puede sacar la CPU a un proceso (Round Robin, prioridad preemptiva). No preemptivo: el proceso la suelta voluntariamente al terminar o bloquearse (FCFS).",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "so-paging",
+      "level": "jr",
+      "area": "so",
+      "title": "Paginación y memoria virtual",
+      "summary": "Cómo el SO simula más memoria de la real.",
+      "added": "2026-06-09",
+      "body": "La **memoria virtual** da a cada proceso la ilusión de tener toda la memoria para sí solo. El SO divide la memoria en bloques de tamaño fijo llamados **páginas** (típico: 4 KB). La memoria física se divide en **marcos (frames)** del mismo tamaño. El mapeo página→marco vive en la **page table** de cada proceso.\n\nCuando un proceso accede a una dirección, la **MMU** (Memory Management Unit, hardware) traduce la dirección virtual a física consultando la page table. Para no hacer esa consulta siempre, existe el **TLB** (Translation Lookaside Buffer): una caché de traducciones recientes. Un hit en TLB es casi gratis; un miss fuerza la consulta a la page table en RAM.\n\nSi una página no está en RAM (está en disco), ocurre un **page fault**: interrupción que el SO atiende trayendo la página del disco, actualizando la page table y reiniciando la instrucción. Es caro (milisegundos vs nanosegundos). Si hay muchos page faults en poco tiempo, el sistema entra en **thrashing**: más tiempo moviendo páginas que ejecutando código.\n\n```mermaid\nflowchart LR\n  virt[Direccion virtual del proceso]\n  virt --> tlb[TLB - cache de traducciones]\n  tlb -->|hit| fis[Direccion fisica en RAM]\n  tlb -->|miss| pt[Page table en RAM]\n  pt -->|pagina presente| fis\n  pt -->|page fault| disco[Disco - swap]\n  disco --> ram[Cargar pagina a RAM]\n  ram --> fis\n```\n\n## Ejemplo\n\n```bash\n# Ver uso de swap (paginas en disco) en Linux\nfree -h\n# Si swap usado es alto -> posible thrashing\n\n# Ver page faults de un proceso\n/usr/bin/time -v python3 mi_script.py 2>&1 | grep 'page fault'\n# Minor faults: pagina en RAM pero no mapeada\n# Major faults: pagina traida desde disco (cara)\n```\n\n💡 **En la entrevista:** distingui page fault menor (la página está en RAM pero no mapeada en el proceso) de mayor (hay que traerla de disco). Y explicá por qué el TLB es crítico: sin él, cada acceso a memoria requeriría dos accesos (page table + dato).",
+      "cards": [
+        {
+          "id": "so-paging-1",
+          "front": "¿Qué es la memoria virtual?",
+          "back": "Una abstracción del SO que da a cada proceso la ilusión de tener toda la memoria para sí solo, usando una capa de traducción de direcciones virtuales a físicas.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-paging-2",
+          "front": "¿Qué es un page fault?",
+          "back": "Interrupción que ocurre cuando un proceso accede a una página que no está cargada en RAM. El SO la trae del disco (swap), actualiza la page table y reinicia la instrucción.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-paging-3",
+          "front": "¿Para qué sirve el TLB?",
+          "back": "Es una caché de traducciones dirección-virtual→física recientes. Evita consultar la page table en RAM en cada acceso, reduciendo el costo de la traducción a casi nada en caso de hit.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-paging-4",
+          "front": "¿Qué es thrashing?",
+          "back": "Estado donde el sistema pasa más tiempo moviendo páginas entre disco y RAM que ejecutando código real. Ocurre cuando hay muchos procesos activos y poca RAM disponible.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-paging-5",
+          "front": "¿Cuál es la diferencia entre page fault menor y mayor?",
+          "back": "Menor: la página está en RAM pero no mapeada en el proceso (rápido). Mayor: la página hay que traerla desde el disco (lento, milisegundos).",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "so-heap-stack",
+      "level": "jr",
+      "area": "so",
+      "title": "Memoria: heap y stack",
+      "summary": "Dónde viven las variables según su duración.",
+      "added": "2026-06-09",
+      "body": "Dentro del espacio de memoria de un proceso, las dos zonas más importantes para el programador son el **stack** y el **heap**. Entender cuál usa qué tipo de dato evita bugs de memoria y explica errores como stack overflow o memory leak.\n\nEl **stack** (pila) guarda las variables locales y los marcos de llamada de función (**stack frames**). Crece y encoge automáticamente: cuando llamás una función se apila un frame; cuando retorna, se desapila. Es gestionado por el SO y la CPU. El stack tiene tamaño limitado (típico: 1–8 MB). Si lo agotás (ej. recursión infinita), obtenés un **stack overflow**.\n\nEl **heap** (montón) guarda memoria alocada dinámicamente en tiempo de ejecución (`malloc` en C, `new` en Java, cualquier objeto en Python). Su tamaño crece según lo que pidas. La gestión es manual en C (`free`) o automática con **garbage collector** en lenguajes modernos. Si no liberás, tenés **memory leak**.\n\n```mermaid\nflowchart TB\n  mem[Espacio de memoria del proceso]\n  mem --> cod[Segmento de codigo - instrucciones]\n  mem --> dat[Segmento de datos - variables globales]\n  mem --> heap[Heap - crece hacia arriba - objetos dinamicos]\n  mem --> stack[Stack - crece hacia abajo - variables locales]\n```\n\n## Ejemplo\n\n```python\ndef suma(a, b):          # a y b -> stack (variables locales)\n    resultado = a + b   # resultado -> stack\n    return resultado\n\n# Los objetos en Python siempre van al heap\nlista = [1, 2, 3]       # la lista vive en el heap\n                        # 'lista' es una referencia en el stack\n\n# Recursion profunda -> stack overflow\ndef infinita():\n    return infinita()   # RecursionError en Python (limite ~1000)\n```\n\n💡 **En la entrevista:** en Python y Java todo objeto va al heap; las referencias/primitivos van al stack. El GC (garbage collector) libera heap automáticamente. En C/C++ el programador es responsable de hacer `free()` por cada `malloc()`, por eso aparecen los memory leaks.",
+      "cards": [
+        {
+          "id": "so-heap-stack-1",
+          "front": "¿Qué se guarda en el stack?",
+          "back": "Variables locales y marcos de llamada de función (stack frames). Se gestiona automáticamente: se apila al llamar una función y se desapila al retornar.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-heap-stack-2",
+          "front": "¿Qué se guarda en el heap?",
+          "back": "Memoria alocada dinámicamente en tiempo de ejecución: objetos creados con new/malloc, listas, dicts, cualquier objeto de vida larga.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-heap-stack-3",
+          "front": "¿Qué es un stack overflow?",
+          "back": "Error que ocurre cuando el stack se agota, típicamente por recursión muy profunda o infinita. El SO envía una señal de fallo al proceso.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-heap-stack-4",
+          "front": "¿Qué es un memory leak?",
+          "back": "Memoria heap que fue alocada pero nunca liberada. En C es por olvidar free(); en lenguajes con GC ocurre si mantenés referencias vivas a objetos que ya no usás.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-heap-stack-5",
+          "front": "¿En Python, los objetos van al stack o al heap?",
+          "back": "Al heap. Las variables locales (que son referencias) van al stack, pero el objeto al que apuntan vive en el heap y es gestionado por el garbage collector.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "so-concurrency",
+      "level": "jr",
+      "area": "so",
+      "title": "Concurrencia: race condition y sincronización",
+      "summary": "Mutex y semáforos para coordinar hilos.",
+      "added": "2026-06-09",
+      "body": "Cuando dos hilos acceden a la misma variable compartida sin coordinación, el resultado depende del orden exacto en que el SO intercala las instrucciones. Eso es una **race condition**. El fragmento de código que accede al recurso compartido se llama **sección crítica**.\n\nUn **mutex** (mutual exclusion lock) resuelve esto: solo un hilo puede tenerlo a la vez. Antes de entrar a la sección crítica hacés `lock()`; al salir, `unlock()`. Si otro hilo intenta hacer `lock()` mientras está tomado, **se bloquea** hasta que el dueño lo libere. El costo: si el mutex está muy disputado, los hilos esperan y se pierde paralelismo.\n\nUn **semáforo** es más general: tiene un contador interno. `wait()` (P) decrementa; si llega a 0, bloquea. `signal()` (V) incrementa y desbloquea un hilo esperando. Un semáforo binario (0/1) se comporta como mutex. Un semáforo con valor N sirve para controlar acceso a un recurso con N instancias (ej. pool de conexiones).\n\n```mermaid\nflowchart TB\n  T1[Thread 1] --> lock[mutex.lock]\n  T2[Thread 2] --> lock\n  lock --> sc[Seccion critica - recurso compartido]\n  sc --> unlock[mutex.unlock]\n  unlock --> T1libre[Thread 1 o 2 continua]\n```\n\n## Ejemplo\n\n```python\nimport threading\n\ncontador = 0\nlock = threading.Lock()\n\ndef incrementar():\n    global contador\n    for _ in range(100000):\n        with lock:          # adquiere y libera automaticamente\n            contador += 1   # seccion critica protegida\n\nt1 = threading.Thread(target=incrementar)\nt2 = threading.Thread(target=incrementar)\nt1.start(); t2.start()\nt1.join(); t2.join()\nprint(contador)  # ahora si: 200000\n```\n\n💡 **En la entrevista:** explicá que el problema de la race condition en `contador += 1` son tres instrucciones no atómicas: leer, sumar, escribir. El SO puede interrumpir entre cualquiera. El mutex hace que esas tres instrucciones sean efectivamente atómicas.",
+      "cards": [
+        {
+          "id": "so-concurrency-1",
+          "front": "¿Qué es una race condition?",
+          "back": "Error que ocurre cuando dos hilos acceden a un recurso compartido sin sincronización y el resultado depende del orden impredecible en que el SO intercala sus instrucciones.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-concurrency-2",
+          "front": "¿Qué es una sección crítica?",
+          "back": "Fragmento de código que accede a un recurso compartido entre hilos. Solo un hilo debería ejecutarla a la vez para evitar race conditions.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-concurrency-3",
+          "front": "¿Cómo funciona un mutex?",
+          "back": "Solo un hilo puede tenerlo a la vez. lock() lo adquiere (bloquea si ya está tomado); unlock() lo libera y despierta un hilo esperando.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-concurrency-4",
+          "front": "¿En qué se diferencia un semáforo de un mutex?",
+          "back": "Un semáforo tiene un contador: permite hasta N accesos simultáneos. Un mutex es binario (0/1). Un semáforo binario equivale a un mutex, pero el semáforo puede ser liberado por otro hilo distinto al que lo adquirió.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-concurrency-5",
+          "front": "¿Por qué contador += 1 tiene race condition en dos hilos?",
+          "back": "No es atómica: son tres instrucciones (leer valor, sumar 1, escribir). El SO puede interrumpir entre cualquiera de ellas, haciendo que los dos hilos lean el mismo valor y una suma se pierda.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-concurrency-6",
+          "front": "¿Qué es el GIL en Python y cómo afecta la concurrencia con hilos?",
+          "back": "Global Interpreter Lock: mutex global que impide que dos hilos ejecuten bytecode Python simultáneamente. Evita race conditions en objetos Python pero limita el paralelismo real en CPU-bound tasks.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "so-deadlock",
+      "level": "jr",
+      "area": "so",
+      "title": "Deadlock (interbloqueo)",
+      "summary": "Cuatro condiciones para que dos hilos se traben.",
+      "added": "2026-06-09",
+      "body": "Un **deadlock** ocurre cuando dos o más hilos o procesos se esperan mutuamente para siempre, sin que ninguno pueda avanzar. Es un bug silencioso: el programa no crashea, simplemente se congela.\n\nCoffman (1971) identificó **cuatro condiciones necesarias y suficientes** para que ocurra un deadlock. Si se rompe cualquiera de las cuatro, el deadlock es imposible:\n\n1. **Exclusión mutua**: el recurso solo puede usarlo un proceso a la vez.\n2. **Hold and wait**: un proceso tiene un recurso y espera por otro.\n3. **No preemption**: los recursos no se pueden quitar a la fuerza.\n4. **Espera circular**: existe un ciclo de espera A→B→C→A.\n\nLa estrategia más usada en la práctica para evitarlo es **orden total de adquisición**: todos los hilos adquieren los locks siempre en el mismo orden. Así no puede formarse el ciclo.\n\n```mermaid\nflowchart LR\n  T1[Thread 1 - tiene lock A] -->|espera lock B| T2[Thread 2 - tiene lock B]\n  T2 -->|espera lock A| T1\n```\n\n## Ejemplo\n\n```python\nimport threading\n\nlock_a = threading.Lock()\nlock_b = threading.Lock()\n\n# MAL: orden distinto -> deadlock posible\ndef hilo1():\n    with lock_a:\n        with lock_b:   # T1 tiene A, espera B\n            pass\n\ndef hilo2():\n    with lock_b:\n        with lock_a:   # T2 tiene B, espera A -> ciclo!\n            pass\n\n# BIEN: mismo orden en ambos hilos\ndef hilo1_seguro():\n    with lock_a:\n        with lock_b:\n            pass\n\ndef hilo2_seguro():\n    with lock_a:   # mismo orden: A antes que B\n        with lock_b:\n            pass\n```\n\n💡 **En la entrevista:** memorizá las cuatro condiciones de Coffman por nombre. La más fácil de romper en la práctica es la espera circular: establecer un orden global de adquisición de locks. También mencioná la detección de deadlocks con timeouts (`lock.acquire(timeout=5)`).",
+      "cards": [
+        {
+          "id": "so-deadlock-1",
+          "front": "¿Qué es un deadlock?",
+          "back": "Estado en que dos o más hilos/procesos se esperan mutuamente para siempre, sin poder avanzar ninguno. El programa se congela sin crashear.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-deadlock-2",
+          "front": "¿Cuáles son las 4 condiciones de Coffman para que ocurra un deadlock?",
+          "back": "1) Exclusión mutua, 2) Hold and wait, 3) No preemption, 4) Espera circular. Las cuatro deben darse simultáneamente.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-deadlock-3",
+          "front": "¿Cómo se previene un deadlock rompiendo la espera circular?",
+          "back": "Imponer un orden total de adquisición de locks: todos los hilos deben adquirir los locks siempre en el mismo orden. Sin ciclo posible, no hay deadlock.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-deadlock-4",
+          "front": "¿Cuál de las 4 condiciones de Coffman es más fácil de romper en la práctica?",
+          "back": "La espera circular: basta con definir un orden global de adquisición de recursos y que todos los hilos lo respeten.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-deadlock-5",
+          "front": "¿Cuál es la diferencia entre deadlock, livelock y starvation?",
+          "back": "Deadlock: nadie avanza, todos esperan. Livelock: todos cambian de estado pero nadie avanza (ciclo activo). Starvation: un hilo nunca recibe el recurso porque otros siempre tienen prioridad.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "so-filesystem",
+      "level": "jr",
+      "area": "so",
+      "title": "Sistema de archivos: inodos y permisos Unix",
+      "summary": "Cómo el SO organiza y protege archivos.",
+      "added": "2026-06-09",
+      "body": "Un **sistema de archivos** es la capa del SO que organiza datos en disco como una jerarquía de archivos y directorios. En sistemas Unix/Linux, cada archivo tiene un **inodo** (inode): una estructura de metadatos que guarda todo sobre el archivo *excepto su nombre*. El nombre vive en el directorio que apunta al inodo.\n\nEl inodo contiene: tipo (archivo, directorio, symlink), tamaño, fechas, permisos, propietario (UID/GID), y **punteros a los bloques de datos** en disco. Que el nombre no esté en el inodo permite los **hard links**: dos entradas de directorio que apuntan al mismo inodo (y por ende al mismo contenido). El archivo se borra cuando el contador de links llega a 0.\n\nLos **permisos Unix** siguen el esquema `rwxrwxrwx`: tres grupos de tres bits para **user** (dueño), **group** y **others**. `r`=leer, `w`=escribir, `x`=ejecutar. Se representan en octal: `rwx`=7, `rw-`=6, `r--`=4, `---`=0. Ejemplo: `chmod 644` da `rw-r--r--` (dueño lee/escribe, el resto solo lee).\n\n```mermaid\nflowchart TB\n  dir[Directorio] -->|nombre - inode number| inode[Inodo]\n  inode --> meta[Metadatos - permisos - tamanio - fechas]\n  inode --> bloques[Punteros a bloques de datos en disco]\n  bloques --> b1[Bloque 1]\n  bloques --> b2[Bloque 2]\n```\n\n## Ejemplo\n\n```bash\n# Ver inodo de un archivo\nls -li archivo.txt\n# Primera columna: numero de inodo\n\n# Ver permisos detallados\nls -la archivo.txt\n# -rw-r--r-- 1 usuario grupo 1024 jun 9 10:00 archivo.txt\n# tipo|user|group|others  links  propietario  tamanio\n\n# Cambiar permisos a rwxr-xr-x (755)\nchmod 755 script.sh\n\n# Crear hard link (mismo inodo, distinto nombre)\nln archivo.txt otro_nombre.txt\nls -li archivo.txt otro_nombre.txt  # mismo numero de inodo\n```\n\n💡 **En la entrevista:** explicá que `rm` no borra el contenido si hay otros hard links al mismo inodo. Y la diferencia entre hard link (mismo inodo) y symlink (archivo separado que contiene una ruta).",
+      "cards": [
+        {
+          "id": "so-filesystem-1",
+          "front": "¿Qué es un inodo?",
+          "back": "Estructura de metadatos de un archivo en Unix: guarda tipo, tamaño, permisos, propietario, fechas y punteros a los bloques de datos. No guarda el nombre del archivo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-filesystem-2",
+          "front": "¿Por qué el nombre del archivo no vive en el inodo?",
+          "back": "Porque eso permite que múltiples entradas de directorio (hard links) apunten al mismo inodo. El archivo existe mientras haya al menos un link al inodo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-filesystem-3",
+          "front": "¿Qué representa chmod 755?",
+          "back": "rwxr-xr-x: el dueño puede leer, escribir y ejecutar (7); el grupo y otros pueden leer y ejecutar (5), pero no escribir.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-filesystem-4",
+          "front": "¿Cuál es la diferencia entre hard link y symlink?",
+          "back": "Hard link: otra entrada de directorio que apunta al mismo inodo (mismo archivo, otro nombre). Symlink: archivo separado que contiene una ruta. Si borrás el original, el symlink queda roto; el hard link no.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-filesystem-5",
+          "front": "¿Cuándo se borra realmente el contenido de un archivo en Unix?",
+          "back": "Cuando el contador de hard links del inodo llega a 0 y ningún proceso lo tiene abierto. rm solo decrementa el contador; si hay otros links, el contenido persiste.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "so-io-buffering",
+      "level": "jr",
+      "area": "so",
+      "title": "Entrada/salida y buffering",
+      "summary": "Bloqueante, no bloqueante y por qué bufferizar.",
+      "added": "2026-06-09",
+      "body": "Las operaciones de **I/O** (leer un archivo, esperar por red) son órdenes de magnitud más lentas que la CPU. El SO ofrece distintos modelos para manejarlas sin desperdiciar ciclos.\n\nEn **I/O bloqueante**, el hilo se suspende (estado blocked) hasta que la operación termina. Simple de usar, pero si tenés un solo hilo que atiende muchas conexiones, una operación lenta paraliza todo. Es el modelo por defecto en la mayoría de lenguajes.\n\nEn **I/O no bloqueante**, la llamada al SO retorna inmediatamente aunque los datos no estén listos (retorna un error `EAGAIN` o similar). El hilo sigue corriendo y pregunta de nuevo más tarde (**polling**) o usa **select/epoll** para que el SO avise cuando haya datos. Así un solo hilo puede manejar miles de conexiones: es la base de Node.js y `asyncio` en Python.\n\nEl **buffering** reduce el número de syscalls: en vez de ir a disco/red por cada byte, se acumulan datos en un buffer en memoria y se envían juntos. Los tres modos clásicos: sin buffer (cada escritura va inmediato), **buffer de línea** (flushea al `\\n`, como `stdout` en terminal) y **buffer completo** (flushea cuando el buffer se llena).\n\n```mermaid\nflowchart TB\n  app[Aplicacion]\n  app -->|bloqueante - espera| so1[SO - syscall read]\n  app -->|no bloqueante - retorna ya| so2[SO - EAGAIN o datos]\n  so1 --> disco[Disco o red]\n  so2 --> disco\n  app --> buf[Buffer en memoria]\n  buf -->|cuando esta lleno o flush| disco\n```\n\n## Ejemplo\n\n```python\nimport asyncio\n\n# I/O no bloqueante con asyncio\nasync def fetch(url):\n    reader, writer = await asyncio.open_connection('example.com', 80)\n    writer.write(b'GET / HTTP/1.0\\r\\n\\r\\n')\n    data = await reader.read(1000)  # no bloquea el event loop\n    writer.close()\n    return data\n\n# Varias conexiones concurrentes sin hilos\nasync def main():\n    resultados = await asyncio.gather(\n        fetch('example.com'),\n        fetch('example.com'),\n    )\n```\n\n💡 **En la entrevista:** el modelo no bloqueante + event loop (Node.js, asyncio) es muy eficiente para I/O-bound (muchas conexiones). Para CPU-bound (cómputo pesado) no ayuda y necesitás hilos o procesos reales.",
+      "cards": [
+        {
+          "id": "so-io-buffering-1",
+          "front": "¿Qué diferencia hay entre I/O bloqueante y no bloqueante?",
+          "back": "Bloqueante: el hilo se suspende hasta que llegan los datos. No bloqueante: la llamada retorna inmediatamente (con EAGAIN si no hay datos), el hilo sigue corriendo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-io-buffering-2",
+          "front": "¿Para qué sirve epoll o select?",
+          "back": "Para que el SO avise cuando uno o más file descriptors tienen datos listos, sin que el programa tenga que hacer polling activo. Base de los event loops (Node.js, asyncio).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-io-buffering-3",
+          "front": "¿Por qué se usa buffering en I/O?",
+          "back": "Para reducir el número de syscalls (llamadas al SO). Acumular datos en memoria y enviarlos juntos es mucho más eficiente que hacer una syscall por cada byte o línea.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-io-buffering-4",
+          "front": "¿Cuándo conviene I/O no bloqueante sobre bloqueante?",
+          "back": "Cuando un solo hilo necesita manejar muchas conexiones concurrentes (I/O-bound). Para CPU-bound no ayuda; ahí necesitás hilos o procesos.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-io-buffering-5",
+          "front": "¿Cuáles son los tres modos de buffering?",
+          "back": "Sin buffer (cada escritura va inmediato), buffer de línea (flushea al salto de línea, típico de stdout en terminal), buffer completo (flushea cuando el buffer se llena, típico de archivos).",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "so-shell",
+      "level": "jr",
+      "area": "so",
+      "title": "Shell: redirección, pipes y permisos",
+      "summary": "Composición de comandos y control de acceso.",
+      "added": "2026-06-09",
+      "body": "La **shell** (bash, zsh) es un intérprete de comandos que actúa como interfaz entre el usuario y el SO. Cada comando que ejecutás es un proceso hijo que la shell crea con `fork()` y luego `exec()`. Entender redirección y pipes es fundamental para componer herramientas Unix.\n\nCada proceso tiene tres **file descriptors** estándar: `0` (stdin), `1` (stdout), `2` (stderr). La **redirección** cambia a dónde apuntan: `>` redirige stdout a un archivo (sobreescribe), `>>` agrega, `2>` redirige stderr, `2>&1` une stderr con stdout. `<` redirige stdin desde un archivo.\n\nUn **pipe** (`|`) conecta el stdout de un proceso con el stdin del siguiente, **en paralelo**: ambos corren al mismo tiempo, el primero escribe y el segundo lee. No se escribe un archivo intermedio. Esto es la filosofía Unix: cada herramienta hace una cosa, los pipes las componen.\n\n`chmod` controla los permisos (ya vistos en inodos). `sudo` ejecuta un comando con privilegios de root. `chown` cambia el propietario. `which` muestra la ruta del binario que se usaría al ejecutar un comando.\n\n```mermaid\nflowchart LR\n  cmd1[proceso 1 - stdout] -->|pipe| cmd2[proceso 2 - stdin]\n  cmd2 -->|stdout| cmd3[proceso 3 o archivo]\n  stdin[archivo o teclado] -->|redireccion menor| cmd1\n```\n\n## Ejemplo\n\n```bash\n# Redireccion: guardar stdout en archivo, stderr aparte\npython3 script.py > salida.txt 2> errores.txt\n\n# Unir stdout y stderr en el mismo archivo\npython3 script.py > todo.txt 2>&1\n\n# Pipe: contar lineas que contienen \"error\" en un log\ncat app.log | grep 'error' | wc -l\n\n# Sin cat (mas eficiente):\ngrep 'error' app.log | wc -l\n\n# Ver las 5 palabras mas frecuentes de un archivo\ntr ' ' '\\n' < texto.txt | sort | uniq -c | sort -rn | head -5\n\n# Permisos: hacer ejecutable un script\nchmod +x deploy.sh\n./deploy.sh\n```\n\n💡 **En la entrevista:** explicá que el pipe corre los procesos en paralelo (no secuencial). El primero escribe en un buffer del kernel; el segundo lee de ese buffer. Si el segundo no lee, el primero se bloquea. Es I/O no bloqueante coordinada por el kernel.",
+      "cards": [
+        {
+          "id": "so-shell-1",
+          "front": "¿Qué son los file descriptors 0, 1 y 2?",
+          "back": "0 = stdin (entrada estándar), 1 = stdout (salida estándar), 2 = stderr (salida de errores). Todo proceso los hereda al crearse.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-shell-2",
+          "front": "¿Qué hace 2>&1 en la shell?",
+          "back": "Redirige stderr (fd 2) al mismo destino que stdout (fd 1). Se usa para capturar tanto la salida normal como los errores en el mismo lugar.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-shell-3",
+          "front": "¿Cómo funciona un pipe en Unix a nivel de procesos?",
+          "back": "Conecta el stdout de un proceso con el stdin del siguiente. Ambos corren en paralelo; el kernel gestiona un buffer entre ellos. No hay archivo intermedio.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-shell-4",
+          "front": "¿Qué syscalls usa la shell para ejecutar un comando?",
+          "back": "fork() para crear un proceso hijo, luego exec() para reemplazar ese proceso con el binario del comando. El proceso padre espera con wait().",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-shell-5",
+          "front": "¿Cuál es la diferencia entre > y >> en redirección?",
+          "back": "> sobreescribe el archivo (lo crea si no existe, lo vacía si existe). >> agrega al final sin borrar el contenido previo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "so-shell-6",
+          "front": "¿Qué hace chmod +x script.sh?",
+          "back": "Agrega el bit de ejecución (x) para el dueño, grupo y otros. Después se puede correr como ./script.sh sin llamar explícitamente al intérprete.",
+          "added": "2026-06-09"
+        }
+      ]
+    }
+  ]
+}

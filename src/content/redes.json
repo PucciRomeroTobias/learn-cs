@@ -1,0 +1,214 @@
+{
+  "lessons": [
+    {
+      "id": "net-osi",
+      "level": "jr",
+      "area": "redes",
+      "title": "Modelo OSI y TCP/IP",
+      "summary": "Las capas que organizan la comunicación en red.",
+      "added": "2026-06-09",
+      "body": "El **modelo OSI** divide la comunicación de red en 7 capas, cada una con una responsabilidad única. Fue diseñado como referencia conceptual y de diagnóstico. En la práctica, la industria usa el **modelo TCP/IP** con 4 capas, que consolida varias capas de OSI.\n\nLa utilidad de conocer las capas es el **aislamiento de problemas**: si hay un problema de DNS, mirás la capa de Aplicación (7); si hay pérdida de paquetes sin orden, mirás Transporte (4); si hay un cable cortado, mirás Física (1).\n\n| Capa OSI | Nombre | Protocolo típico |\n|---|---|---|\n| 7 | Aplicación | HTTP, DNS, SMTP |\n| 6 | Presentación | TLS, JPEG, ASCII |\n| 5 | Sesión | NetBIOS, RPC |\n| 4 | Transporte | TCP, UDP |\n| 3 | Red | IP, ICMP |\n| 2 | Enlace de datos | Ethernet, WiFi |\n| 1 | Física | Cable, señal eléctrica |\n\nEl modelo **TCP/IP** agrupa esas capas en 4: Acceso a red (1+2), Internet (3), Transporte (4) y Aplicación (5-6-7). Es más pragmático y es el que describe cómo funciona realmente internet.\n\n```mermaid\nflowchart TB\n  App[Aplicacion HTTP DNS SMTP] --> Trans[Transporte TCP UDP]\n  Trans --> Red[Red IP ICMP]\n  Red --> Enlace[Enlace y Fisica Ethernet WiFi]\n```\n\n## Ejemplo\n\n```bash\n# ping opera en capa 3 (ICMP sobre IP)\nping google.com\n\n# traceroute muestra el camino capa a capa\ntraceroute google.com\n```\n\n💡 **En la entrevista:** te pueden preguntar en qué capa opera un protocolo. HTTP y DNS son capa 7; TCP/UDP son capa 4; IP es capa 3. La mnemotécnica clásica de OSI de arriba hacia abajo: All People Seem To Need Data Processing.",
+      "cards": [
+        {"id": "net-osi-1", "front": "¿Cuántas capas tiene el modelo OSI?", "back": "7 capas: Física, Enlace de datos, Red, Transporte, Sesión, Presentación y Aplicación.", "added": "2026-06-09"},
+        {"id": "net-osi-2", "front": "¿Cuántas capas tiene el modelo TCP/IP y cuáles son?", "back": "4 capas: Acceso a red, Internet (IP), Transporte (TCP/UDP) y Aplicación.", "added": "2026-06-09"},
+        {"id": "net-osi-3", "front": "¿En qué capa OSI opera HTTP?", "back": "Capa 7, Aplicación.", "added": "2026-06-09"},
+        {"id": "net-osi-4", "front": "¿En qué capa OSI opera IP?", "back": "Capa 3, Red.", "added": "2026-06-09"},
+        {"id": "net-osi-5", "front": "¿Para qué sirve conocer las capas OSI en la práctica?", "back": "Para aislar problemas de red: cada capa tiene responsabilidades distintas y eso guía el diagnóstico.", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-ip-dns",
+      "level": "jr",
+      "area": "redes",
+      "title": "IP, DNS y enrutamiento básico",
+      "summary": "Cómo los paquetes encuentran su destino.",
+      "added": "2026-06-09",
+      "body": "Una **dirección IP** es el identificador único de un dispositivo en una red. IPv4 usa 32 bits (ej. `192.168.1.1`); IPv6 usa 128 bits (ej. `2001:db8::1`). Las IPs privadas (como `192.168.x.x` o `10.x.x.x`) solo son válidas dentro de una red local; para salir a internet se usa **NAT** (Network Address Translation).\n\n**DNS** (Domain Name System) es la agenda telefónica de internet: traduce nombres de dominio legibles (`google.com`) a direcciones IP (`142.250.80.46`). La resolución pasa por varios servidores: primero la caché local, luego el resolver del ISP, luego los **servidores raíz**, y finalmente el servidor autoritativo del dominio.\n\nEl **enrutamiento** es el proceso por el que un paquete IP viaja de origen a destino saltando de router en router. Cada router decide el siguiente salto según su **tabla de enrutamiento**. Protocolos como BGP coordinan estas tablas a escala de internet.\n\n```mermaid\nflowchart LR\n  Browser[Navegador] --> Resolver[Resolver DNS local]\n  Resolver --> Raiz[Servidor raiz]\n  Raiz --> TLD[Servidor TLD .com]\n  TLD --> Auth[Servidor autoritativo]\n  Auth --> IP[Retorna IP]\n  IP --> Browser\n```\n\n## Ejemplo\n\n```bash\n# Resolver la IP de un dominio\nnslookup github.com\n\n# Ver el camino que toman los paquetes (cada linea es un router)\ntraceroute github.com\n\n# Consultar registros DNS manualmente\ndig github.com A\n```\n\n💡 **En la entrevista:** suelen preguntar qué pasa cuando escribís una URL en el browser. La respuesta empieza con DNS: el browser resuelve el nombre a IP antes de abrir cualquier conexión TCP.",
+      "cards": [
+        {"id": "net-ip-dns-1", "front": "¿Qué hace DNS?", "back": "Traduce nombres de dominio (como google.com) a direcciones IP.", "added": "2026-06-09"},
+        {"id": "net-ip-dns-2", "front": "¿Cuál es la diferencia entre IPv4 e IPv6?", "back": "IPv4 usa 32 bits (ej. 192.168.1.1); IPv6 usa 128 bits y resuelve el agotamiento de direcciones IPv4.", "added": "2026-06-09"},
+        {"id": "net-ip-dns-3", "front": "¿Qué es NAT?", "back": "Network Address Translation: permite que múltiples dispositivos con IPs privadas compartan una sola IP pública.", "added": "2026-06-09"},
+        {"id": "net-ip-dns-4", "front": "¿Qué es el enrutamiento?", "back": "El proceso por el que los routers deciden el siguiente salto para llevar un paquete IP de origen a destino.", "added": "2026-06-09"},
+        {"id": "net-ip-dns-5", "front": "¿Qué orden sigue la resolución DNS?", "back": "Caché local del SO → resolver del ISP → servidores raíz → servidor TLD → servidor autoritativo del dominio.", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-tcp-udp",
+      "level": "jr",
+      "area": "redes",
+      "title": "TCP vs UDP",
+      "summary": "Confiabilidad y velocidad en la capa de transporte.",
+      "added": "2026-06-09",
+      "body": "**TCP** (Transmission Control Protocol) establece una conexión antes de enviar datos mediante el **three-way handshake** (SYN → SYN-ACK → ACK). Garantiza que los datos lleguen en orden, sin duplicados y sin pérdidas; si un paquete no llega, lo retransmite. Este overhead lo hace confiable pero más lento.\n\n**UDP** (User Datagram Protocol) es sin conexión: envía datagramas sin esperar confirmación. No garantiza orden ni entrega. A cambio, tiene muy baja latencia. Es ideal cuando una pérdida ocasional es tolerable y la velocidad importa más que la perfección.\n\n| Característica | TCP | UDP |\n|---|---|---|\n| Conexión | Sí (handshake) | No |\n| Orden garantizado | Sí | No |\n| Retransmisión | Sí | No |\n| Velocidad | Menor | Mayor |\n| Uso típico | HTTP, SSH, email | DNS, streaming, juegos |\n\n```mermaid\nflowchart TB\n  Cliente[Cliente] --> SYN[1 SYN]\n  SYN --> Servidor[Servidor]\n  Servidor --> SYNACK[2 SYN-ACK]\n  SYNACK --> Cliente\n  Cliente --> ACK[3 ACK]\n  ACK --> Servidor\n  Servidor --> Datos[Datos fluyen]\n```\n\n## Ejemplo\n\n```bash\n# Capturar el handshake TCP en la interfaz de red\ntcpdump -i eth0 'tcp[tcpflags] & (tcp-syn|tcp-ack) != 0' -n\n\n# Ver conexiones TCP establecidas\nss -tn state established\n```\n\n💡 **En la entrevista:** si te preguntan cuándo usar UDP, respondé con ejemplos concretos: DNS (consultas rápidas de una sola pregunta/respuesta), streaming de video/audio (un frame perdido no vale retransmitir), y videojuegos online (la latencia importa más que la perfección).",
+      "cards": [
+        {"id": "net-tcp-udp-1", "front": "¿Qué es el three-way handshake de TCP?", "back": "El proceso de establecer conexión en 3 pasos: el cliente envía SYN, el servidor responde SYN-ACK, y el cliente confirma con ACK.", "added": "2026-06-09"},
+        {"id": "net-tcp-udp-2", "front": "¿Por qué UDP es más rápido que TCP?", "back": "UDP no establece conexión ni espera confirmaciones de entrega, eliminando el overhead del handshake y la retransmisión.", "added": "2026-06-09"},
+        {"id": "net-tcp-udp-3", "front": "¿En qué capa OSI operan TCP y UDP?", "back": "Capa 4, Transporte.", "added": "2026-06-09"},
+        {"id": "net-tcp-udp-4", "front": "Nombrá dos protocolos que usan TCP y dos que usan UDP.", "back": "TCP: HTTP y SSH. UDP: DNS y streaming de video.", "added": "2026-06-09"},
+        {"id": "net-tcp-udp-5", "front": "¿Qué garantiza TCP que UDP no garantiza?", "back": "Entrega ordenada, sin duplicados y sin pérdidas; retransmite automáticamente si un paquete no llega.", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-http",
+      "level": "jr",
+      "area": "redes",
+      "title": "HTTP/1.1: métodos y ciclo request/response",
+      "summary": "El protocolo base de la web y sus reglas.",
+      "added": "2026-06-09",
+      "body": "**HTTP** (HyperText Transfer Protocol) es el protocolo de la capa de aplicación que usa la web. Funciona sobre TCP y define cómo un **cliente** (browser, app) le pide recursos a un **servidor** y cómo este responde. Es **stateless**: cada request es independiente; el servidor no recuerda el anterior.\n\nCada request tiene un **método** que indica la intención. Los más importantes: `GET` lee sin efectos secundarios, `POST` crea o procesa, `PUT` reemplaza un recurso completo, `PATCH` lo modifica parcialmente y `DELETE` lo borra. `GET` y `PUT` son **idempotentes** — llamarlos varias veces da el mismo resultado que llamarlos una vez. `POST` no lo es.\n\n| Método | Idempotente | Seguro | Uso típico |\n|---|---|---|---|\n| GET | Sí | Sí | Leer recursos |\n| POST | No | No | Crear / enviar datos |\n| PUT | Sí | No | Reemplazar recurso |\n| PATCH | No | No | Modificar parcialmente |\n| DELETE | Sí | No | Eliminar recurso |\n\n```mermaid\nflowchart LR\n  Cliente[Cliente] --> Req[Request con metodo y headers]\n  Req --> Servidor[Servidor]\n  Servidor --> Res[Response con status code y body]\n  Res --> Cliente\n```\n\n## Ejemplo\n\n```http\nGET /users/42 HTTP/1.1\nHost: api.ejemplo.com\nAccept: application/json\n\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"id\": 42, \"nombre\": \"Ana\"}\n```\n\n💡 **En la entrevista:** GET y PUT son idempotentes; POST no. Seguro significa que no produce efectos secundarios en el servidor (solo GET y HEAD son seguros). Si te preguntan la diferencia entre PUT y PATCH: PUT reemplaza el recurso completo, PATCH solo los campos que mandás.",
+      "cards": [
+        {"id": "net-http-1", "front": "¿Qué significa que HTTP sea stateless?", "back": "Cada request es independiente; el servidor no recuerda los anteriores sin mecanismos adicionales como cookies o tokens.", "added": "2026-06-09"},
+        {"id": "net-http-2", "front": "¿Qué es idempotencia en HTTP?", "back": "Una operación es idempotente si hacerla N veces tiene el mismo efecto que hacerla una sola vez. GET, PUT y DELETE son idempotentes; POST no.", "added": "2026-06-09"},
+        {"id": "net-http-3", "front": "¿Cuál es la diferencia entre PUT y PATCH?", "back": "PUT reemplaza el recurso completo; PATCH aplica una modificación parcial solo a los campos enviados.", "added": "2026-06-09"},
+        {"id": "net-http-4", "front": "¿Qué método HTTP es seguro?", "back": "GET y HEAD son seguros: no producen efectos secundarios en el servidor.", "added": "2026-06-09"},
+        {"id": "net-http-5", "front": "¿Qué contiene un HTTP request mínimo?", "back": "Método, URI y versión de protocolo en la primera línea; headers como Host; y opcionalmente un body.", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-status-codes",
+      "level": "jr",
+      "area": "redes",
+      "title": "Códigos de estado HTTP",
+      "summary": "Qué significa cada número de respuesta HTTP.",
+      "added": "2026-06-09",
+      "body": "Los **códigos de estado HTTP** son números de 3 dígitos que el servidor incluye en cada response para indicar el resultado. El primer dígito define la **clase** del resultado. Conocer las clases y los códigos más comunes es indispensable para debuggear APIs.\n\n| Clase | Significado | Ejemplos clave |\n|---|---|---|\n| 1xx | Informativo | 100 Continue |\n| 2xx | Éxito | 200 OK, 201 Created, 204 No Content |\n| 3xx | Redirección | 301 Moved Permanently, 302 Found, 304 Not Modified |\n| 4xx | Error del cliente | 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 429 Too Many Requests |\n| 5xx | Error del servidor | 500 Internal Server Error, 502 Bad Gateway, 503 Service Unavailable |\n\nAlgunos que confunden: **401** significa no autenticado (el servidor no sabe quién sos); **403** significa no autorizado (el servidor sabe quién sos pero no te da permiso). **301** es una redirección permanente (los motores de búsqueda transfieren el SEO); **302** es temporal.\n\n```mermaid\nflowchart TB\n  Request[Request del cliente] --> Check{Que paso}\n  Check --> OK[2xx Exito]\n  Check --> Redirect[3xx Redireccion]\n  Check --> ClientErr[4xx Error del cliente]\n  Check --> ServerErr[5xx Error del servidor]\n```\n\n## Ejemplo\n\n```bash\n# Ver el status code de una respuesta\ncurl -s -o /dev/null -w \"%{http_code}\" https://httpbin.org/status/404\n# Output: 404\n\ncurl -s -o /dev/null -w \"%{http_code}\" https://httpbin.org/get\n# Output: 200\n```\n\n💡 **En la entrevista:** la distinción 401 vs 403 es clásica. 401 = no autenticado (no sabemos quién sos), 403 = no autorizado (sabemos quién sos pero no podés). También suelen preguntar cuándo devolver 400 vs 422: 400 es request malformado (JSON inválido), 422 es request bien formado pero con datos semánticamente incorrectos.",
+      "cards": [
+        {"id": "net-status-codes-1", "front": "¿Qué diferencia hay entre 401 y 403?", "back": "401 Unauthorized: el cliente no está autenticado (el servidor no sabe quién es). 403 Forbidden: autenticado pero sin permiso.", "added": "2026-06-09"},
+        {"id": "net-status-codes-2", "front": "¿Qué indica un código 2xx?", "back": "Que el request fue recibido, entendido y procesado exitosamente.", "added": "2026-06-09"},
+        {"id": "net-status-codes-3", "front": "¿Cuándo se devuelve un 201?", "back": "Cuando se crea un recurso exitosamente, típicamente en respuesta a un POST.", "added": "2026-06-09"},
+        {"id": "net-status-codes-4", "front": "¿Qué diferencia hay entre 301 y 302?", "back": "301 es redirección permanente (el recurso cambió de URL para siempre); 302 es temporal.", "added": "2026-06-09"},
+        {"id": "net-status-codes-5", "front": "¿Qué indica un 429?", "back": "Too Many Requests: el cliente excedió el rate limit del servidor.", "added": "2026-06-09"},
+        {"id": "net-status-codes-6", "front": "¿Qué diferencia hay entre 500 y 503?", "back": "500 Internal Server Error: error genérico del servidor. 503 Service Unavailable: el servidor está temporalmente fuera de servicio (sobrecarga o mantenimiento).", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-https-tls",
+      "level": "jr",
+      "area": "redes",
+      "title": "HTTPS y TLS",
+      "summary": "Cómo se cifra y autentica la conexión web.",
+      "added": "2026-06-09",
+      "body": "**HTTPS** no es un protocolo separado: es HTTP corriendo dentro de un túnel **TLS** (Transport Layer Security). TLS provee tres garantías: **confidencialidad** (nadie en el camino puede leer los datos), **integridad** (nadie puede modificarlos sin que se detecte) y **autenticación** (el cliente verifica que está hablando con el servidor correcto mediante un **certificado digital**).\n\nEl **TLS handshake** ocurre antes de que fluya cualquier dato HTTP. En TLS 1.3, el proceso es más eficiente: el cliente y el servidor negocian cifrado, el servidor presenta su certificado firmado por una **CA** (Certificate Authority) de confianza, y derivan una **clave de sesión** simétrica para cifrar el resto de la comunicación. TLS 1.3 necesita solo 1 round-trip (vs 2 en TLS 1.2).\n\nUn **certificado digital** contiene: el dominio, la clave pública del servidor, y la firma de la CA. El browser confía en un conjunto preinstalado de CAs raíz; si el certificado tiene una cadena de confianza válida hasta una de ellas, la conexión es confiable.\n\n```mermaid\nflowchart TB\n  Cliente[Cliente] --> CH[ClientHello versiones y ciphers]\n  CH --> Servidor[Servidor]\n  Servidor --> SH[ServerHello cipher elegido]\n  SH --> Cert[Certificado firmado por CA]\n  Cert --> Cliente\n  Cliente --> Verify[Verifica cadena de confianza]\n  Verify --> Keys[Deriva clave de sesion]\n  Keys --> Datos[Datos cifrados HTTP]\n```\n\n## Ejemplo\n\n```bash\n# Ver el certificado TLS de un sitio\ncurl -v https://github.com 2>&1 | grep -E 'subject|issuer|expire'\n\n# Inspeccionar el handshake TLS\nopenssl s_client -connect github.com:443 -brief\n```\n\n💡 **En la entrevista:** HTTPS = HTTP + TLS. TLS garantiza confidencialidad, integridad y autenticación del servidor. Si te preguntan por qué el candado no garantiza que el sitio es legítimo: solo garantiza que la conexión es con quien tiene ese certificado — el certificado puede pertenecer a un sitio malicioso con dominio propio.",
+      "cards": [
+        {"id": "net-https-tls-1", "front": "¿Qué tres garantías ofrece TLS?", "back": "Confidencialidad (cifrado), integridad (no modificable en tránsito) y autenticación (el servidor es quien dice ser).", "added": "2026-06-09"},
+        {"id": "net-https-tls-2", "front": "¿Qué es una CA (Certificate Authority)?", "back": "Una entidad de confianza que firma certificados digitales, garantizando que el certificado pertenece realmente al dominio indicado.", "added": "2026-06-09"},
+        {"id": "net-https-tls-3", "front": "¿Qué es HTTPS?", "back": "HTTP corriendo sobre TLS. No es un protocolo separado sino HTTP dentro de un túnel cifrado.", "added": "2026-06-09"},
+        {"id": "net-https-tls-4", "front": "¿Cuántos round-trips necesita el handshake TLS 1.3?", "back": "Solo 1 round-trip (TLS 1.2 necesitaba 2), lo que reduce la latencia de establecimiento de conexión.", "added": "2026-06-09"},
+        {"id": "net-https-tls-5", "front": "¿El candado de HTTPS garantiza que el sitio es confiable?", "back": "No. Solo garantiza que la conexión está cifrada con quien tiene ese certificado. El dueño puede ser malicioso si tiene un dominio propio con certificado válido.", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-cookies-sessions",
+      "level": "jr",
+      "area": "redes",
+      "title": "Cookies, sesiones y estado",
+      "summary": "Cómo la web recuerda al usuario entre requests.",
+      "added": "2026-06-09",
+      "body": "HTTP es **stateless**, pero las aplicaciones necesitan recordar usuarios entre requests. La solución más clásica es la **cookie**: el servidor le dice al browser que almacene un pequeño dato (`Set-Cookie` header), y el browser lo envía automáticamente en cada request siguiente al mismo dominio.\n\nUna **sesión del lado del servidor** funciona así: en el login el servidor crea un objeto de sesión en memoria o base de datos, genera un `session_id` aleatorio, y lo manda como cookie. En cada request posterior el browser envía ese `session_id` y el servidor lo usa para recuperar los datos de esa sesión. El estado vive en el servidor.\n\nLas cookies tienen atributos importantes de seguridad: `HttpOnly` evita que JavaScript las lea (protege contra XSS); `Secure` hace que solo se envíen por HTTPS; `SameSite` controla si se envían en requests cross-site (protege contra CSRF).\n\n```mermaid\nflowchart LR\n  Login[POST login] --> Servidor[Servidor crea sesion]\n  Servidor --> Cookie[Set-Cookie session id]\n  Cookie --> Browser[Browser guarda cookie]\n  Browser --> NextReq[GET dashboard con Cookie session id]\n  NextReq --> Servidor\n  Servidor --> Lookup[Busca sesion y responde]\n```\n\n## Ejemplo\n\n```http\n# El servidor setea la cookie en el login\nHTTP/1.1 200 OK\nSet-Cookie: session_id=abc123; HttpOnly; Secure; SameSite=Lax; Max-Age=3600\n\n# El browser la manda automaticamente en cada request siguiente\nGET /dashboard HTTP/1.1\nCookie: session_id=abc123\n```\n\n💡 **En la entrevista:** la diferencia entre cookies y localStorage: las cookies se envían automáticamente en cada HTTP request (útiles para auth); localStorage solo es accesible desde JavaScript (útil para datos del cliente). `HttpOnly` es clave para seguridad: evita que scripts maliciosos roben la cookie.",
+      "cards": [
+        {"id": "net-cookies-sessions-1", "front": "¿Por qué se necesitan cookies si HTTP ya funciona?", "back": "HTTP es stateless; las cookies le permiten al servidor recordar al usuario entre requests independientes.", "added": "2026-06-09"},
+        {"id": "net-cookies-sessions-2", "front": "¿Qué hace el atributo HttpOnly en una cookie?", "back": "Impide que JavaScript acceda a la cookie, protegiéndola de ataques XSS que intenten robarla.", "added": "2026-06-09"},
+        {"id": "net-cookies-sessions-3", "front": "¿Qué hace el atributo SameSite en una cookie?", "back": "Controla si la cookie se envía en requests cross-site, lo que protege contra ataques CSRF.", "added": "2026-06-09"},
+        {"id": "net-cookies-sessions-4", "front": "¿Dónde vive el estado en una arquitectura de sesión del lado del servidor?", "back": "En el servidor (memoria, base de datos, Redis). El browser solo guarda el session_id como cookie.", "added": "2026-06-09"},
+        {"id": "net-cookies-sessions-5", "front": "¿Cuál es la diferencia entre cookies y localStorage?", "back": "Las cookies se envían automáticamente en cada HTTP request; localStorage solo es accesible por JavaScript y nunca se envía automáticamente.", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-jwt",
+      "level": "jr",
+      "area": "redes",
+      "title": "Autenticación con JWT y tokens",
+      "summary": "Tokens firmados para autenticación stateless.",
+      "added": "2026-06-09",
+      "body": "**JWT** (JSON Web Token, RFC 7519) es un formato estándar para transmitir información entre partes de forma segura y compacta. Se usa principalmente para **autenticación stateless**: en lugar de guardar sesiones en el servidor, el servidor emite un token firmado que el cliente guarda y envía en cada request.\n\nUn JWT tiene 3 partes separadas por puntos, cada una en Base64URL: **Header** (algoritmo de firma, ej. HS256 o RS256), **Payload** (claims: datos como user_id, roles, expiración) y **Signature** (hash del header + payload con la clave secreta). La firma garantiza que el token no fue alterado. El servidor puede **verificar** un JWT sin consultarla base de datos — solo necesita la clave.\n\nEl cliente recibe el JWT en el login y lo envía en el header `Authorization: Bearer <token>` en cada request. Como el estado está en el token, el servidor es **completamente stateless**.\n\n```mermaid\nflowchart LR\n  Login[POST login con credenciales] --> Servidor[Servidor valida]\n  Servidor --> Token[Emite JWT firmado]\n  Token --> Cliente[Cliente guarda el JWT]\n  Cliente --> API[GET recurso con Authorization Bearer JWT]\n  API --> Verify[Servidor verifica firma]\n  Verify --> Resp[Responde si el token es valido]\n```\n\n## Ejemplo\n\n```http\n# Login: recibir el token\nPOST /auth/login HTTP/1.1\nContent-Type: application/json\n\n{\"email\": \"ana@ejemplo.com\", \"password\": \"secreto\"}\n\nHTTP/1.1 200 OK\n{\"token\": \"eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjQyfQ.FIRMA\"}\n\n# Usar el token en requests siguientes\nGET /api/profile HTTP/1.1\nAuthorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjQyfQ.FIRMA\n```\n\n💡 **En la entrevista:** la desventaja de JWT es que no se pueden invalidar fácilmente antes de expirar (no hay sesión en el servidor que borrar). Para logout real hay que mantener una blacklist o usar tokens de vida muy corta con refresh tokens. JWT no cifra el payload — cualquiera puede decodificarlo en Base64; solo garantiza que no fue modificado.",
+      "cards": [
+        {"id": "net-jwt-1", "front": "¿Cuáles son las 3 partes de un JWT?", "back": "Header (algoritmo), Payload (claims como user_id y expiración) y Signature (hash firmado con la clave secreta).", "added": "2026-06-09"},
+        {"id": "net-jwt-2", "front": "¿Por qué un JWT permite autenticación stateless?", "back": "El servidor verifica la firma sin consultar la base de datos; el estado del usuario está en el propio token.", "added": "2026-06-09"},
+        {"id": "net-jwt-3", "front": "¿El payload de un JWT está cifrado?", "back": "No. Está codificado en Base64URL, que es reversible. Cualquiera puede leerlo; la firma solo garantiza que no fue alterado.", "added": "2026-06-09"},
+        {"id": "net-jwt-4", "front": "¿Cómo se envía un JWT al servidor?", "back": "En el header HTTP: Authorization: Bearer <token>", "added": "2026-06-09"},
+        {"id": "net-jwt-5", "front": "¿Cuál es la principal desventaja de JWT vs sesiones del servidor?", "back": "Un JWT no se puede invalidar antes de su expiración sin mantener una blacklist, porque el servidor no guarda estado de sesión.", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-rest",
+      "level": "jr",
+      "area": "redes",
+      "title": "REST: principios y diseño de APIs",
+      "summary": "Las 6 restricciones que definen una API REST.",
+      "added": "2026-06-09",
+      "body": "**REST** (Representational State Transfer) es un estilo arquitectónico para APIs definido por Roy Fielding en 2000. No es un protocolo ni un estándar: es un conjunto de restricciones. Una API que las cumple se llama **RESTful**.\n\nLas 6 restricciones de REST son: **Client-Server** (separación de responsabilidades), **Stateless** (cada request contiene toda la info necesaria, sin estado en el servidor), **Cacheable** (las respuestas deben indicar si son cacheables), **Layered System** (el cliente no sabe si habla directo al servidor o a un proxy), **Uniform Interface** (recursos identificados por URIs, representaciones estándar, mensajes auto-descriptivos) y **Code on Demand** (opcional: el servidor puede enviar código ejecutable).\n\nEn la práctica, el diseño RESTful implica: recursos son **sustantivos** en la URI (`/users`, `/orders`), los **métodos HTTP** expresan la acción, y los **status codes** expresan el resultado. Versionar con `/v1/` en el path o header `Accept-Version`.\n\n```mermaid\nflowchart LR\n  Cliente[Cliente] --> URI[URI identifica recurso]\n  URI --> Metodo[Metodo HTTP indica accion]\n  Metodo --> Server[Servidor]\n  Server --> Code[Status code del resultado]\n  Code --> Body[Body con representacion]\n  Body --> Cliente\n```\n\n## Ejemplo\n\n```http\n# Listar usuarios\nGET /v1/users HTTP/1.1\n\n# Crear usuario\nPOST /v1/users HTTP/1.1\nContent-Type: application/json\n{\"nombre\": \"Ana\", \"email\": \"ana@ejemplo.com\"}\n\n# Respuesta: 201 Created con Location\nHTTP/1.1 201 Created\nLocation: /v1/users/42\n```\n\n💡 **En la entrevista:** REST y HTTP no son lo mismo. REST es un estilo arquitectónico; HTTP es el protocolo. Una API puede usar HTTP sin ser RESTful. El error más común es usar verbos en la URI (`/getUsers`) — en REST los verbos son los métodos HTTP; las URIs deben ser sustantivos.",
+      "cards": [
+        {"id": "net-rest-1", "front": "¿Qué es REST?", "back": "Un estilo arquitectónico para APIs con 6 restricciones definidas por Roy Fielding. No es un protocolo sino un conjunto de principios de diseño.", "added": "2026-06-09"},
+        {"id": "net-rest-2", "front": "¿Qué significa que REST sea stateless?", "back": "Cada request debe contener toda la información necesaria para procesarse; el servidor no guarda estado entre requests.", "added": "2026-06-09"},
+        {"id": "net-rest-3", "front": "¿Por qué se deben usar sustantivos en las URIs REST?", "back": "Los verbos ya los aportan los métodos HTTP (GET, POST, PUT, DELETE). La URI identifica el recurso, no la acción.", "added": "2026-06-09"},
+        {"id": "net-rest-4", "front": "¿Cuál es la diferencia entre REST y HTTP?", "back": "HTTP es el protocolo de transporte; REST es un estilo arquitectónico que generalmente usa HTTP pero podría usar otros protocolos.", "added": "2026-06-09"},
+        {"id": "net-rest-5", "front": "¿Qué incluye el principio Uniform Interface de REST?", "back": "Recursos identificados por URIs, representaciones estándar (JSON/XML), métodos HTTP estándar y mensajes auto-descriptivos.", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-graphql-grpc",
+      "level": "jr",
+      "area": "redes",
+      "title": "GraphQL y gRPC: introducción y diferencias con REST",
+      "summary": "Alternativas a REST para casos específicos.",
+      "added": "2026-06-09",
+      "body": "**GraphQL** es un lenguaje de consulta para APIs creado por Facebook en 2015. En lugar de múltiples endpoints (`/users`, `/orders`), expone **un solo endpoint** y el cliente especifica exactamente qué campos necesita. Esto resuelve dos problemas comunes de REST: **overfetching** (recibir más datos de los necesarios) y **underfetching** (necesitar varios requests para obtener datos relacionados).\n\n**gRPC** es un framework RPC de alto rendimiento creado por Google, que usa **Protocol Buffers** (protobuf) como formato binario en lugar de JSON. Es extremadamente eficiente en latencia y ancho de banda — ideal para comunicación entre microservicios internos. Requiere que cliente y servidor compartan el schema `.proto`.\n\n| Dimensión | REST | GraphQL | gRPC |\n|---|---|---|---|\n| Formato | JSON | JSON | Binario (protobuf) |\n| Schema | Opcional (OpenAPI) | Obligatorio | Obligatorio (.proto) |\n| Flexibilidad de query | Fija por endpoint | Alta (el cliente elige) | Fija por servicio |\n| Ideal para | APIs públicas | Frontend complejo | Microservicios internos |\n| Curva de aprendizaje | Baja | Media | Alta |\n\n```mermaid\nflowchart TB\n  Cliente[Cliente] --> REST[REST varios endpoints]\n  Cliente --> GQL[GraphQL un endpoint query flexible]\n  Cliente --> GRPC[gRPC llamada binaria eficiente]\n  REST --> Server[Servidor]\n  GQL --> Server\n  GRPC --> Server\n```\n\n## Ejemplo\n\n```graphql\n# Query GraphQL: el cliente pide exactamente lo que necesita\nquery {\n  user(id: 42) {\n    nombre\n    email\n    ordenes {\n      id\n      total\n    }\n  }\n}\n```\n\n💡 **En la entrevista:** no hay un ganador universal. REST para APIs públicas simples, GraphQL cuando el frontend necesita flexibilidad en los datos (múltiples vistas, apps mobile con ancho de banda limitado), gRPC para comunicación interna entre microservicios donde la performance es crítica.",
+      "cards": [
+        {"id": "net-graphql-grpc-1", "front": "¿Qué problema de REST resuelve GraphQL?", "back": "Overfetching (recibir más datos de los necesarios) y underfetching (necesitar múltiples requests para datos relacionados).", "added": "2026-06-09"},
+        {"id": "net-graphql-grpc-2", "front": "¿Cuántos endpoints expone GraphQL vs REST?", "back": "GraphQL expone un solo endpoint; REST expone uno por recurso (/users, /orders, etc.).", "added": "2026-06-09"},
+        {"id": "net-graphql-grpc-3", "front": "¿Por qué gRPC es más rápido que REST con JSON?", "back": "gRPC usa Protocol Buffers (formato binario compacto) en lugar de JSON, reduciendo el tamaño de los mensajes y el tiempo de serialización.", "added": "2026-06-09"},
+        {"id": "net-graphql-grpc-4", "front": "¿Para qué tipo de comunicación es ideal gRPC?", "back": "Para comunicación interna entre microservicios, donde la performance es crítica y cliente y servidor son controlados por el mismo equipo.", "added": "2026-06-09"},
+        {"id": "net-graphql-grpc-5", "front": "¿Qué es un archivo .proto en gRPC?", "back": "El schema compartido entre cliente y servidor que define los mensajes y servicios. Se usa para generar código en múltiples lenguajes.", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-websockets",
+      "level": "jr",
+      "area": "redes",
+      "title": "WebSockets y comunicación en tiempo real",
+      "summary": "Conexión persistente bidireccional para apps en vivo.",
+      "added": "2026-06-09",
+      "body": "**WebSockets** es un protocolo que provee comunicación **bidireccional y full-duplex** sobre una única conexión TCP persistente. A diferencia de HTTP (donde el cliente siempre inicia y el servidor responde), con WebSockets el servidor puede **push** datos al cliente en cualquier momento sin que este los pida.\n\nLa conexión WebSocket comienza con un **HTTP Upgrade handshake**: el cliente manda un request HTTP con `Upgrade: websocket` y si el servidor acepta, la conexión se convierte en WebSocket y ya no usa HTTP. Una vez establecida, ambas partes pueden enviar **frames** con muy bajo overhead.\n\nAlternativas más simples según el caso: **SSE** (Server-Sent Events) es unidireccional del servidor al cliente — perfecto para notificaciones o feeds en vivo sin necesitar enviar datos desde el cliente. **Long polling** es la técnica más antigua: el cliente hace un request HTTP y el servidor lo mantiene abierto hasta tener datos nuevos.\n\n```mermaid\nflowchart LR\n  Cliente[Cliente] --> Upgrade[HTTP Upgrade a WebSocket]\n  Upgrade --> Servidor[Servidor acepta]\n  Servidor --> Conn[Conexion persistente abierta]\n  Conn --> Push[Servidor envia datos sin request]\n  Conn --> Send[Cliente envia datos cuando quiere]\n```\n\n## Ejemplo\n\n```javascript\n// Conectar y escuchar mensajes en tiempo real\nconst ws = new WebSocket('wss://api.ejemplo.com/chat');\n\nws.onopen = () => ws.send(JSON.stringify({ tipo: 'join', sala: 'general' }));\nws.onmessage = (event) => console.log('Mensaje recibido:', event.data);\nws.onclose = () => console.log('Conexion cerrada');\n```\n\n💡 **En la entrevista:** WebSockets para chat, colaboración en tiempo real, feeds de datos financieros. Si solo necesitás notificaciones del servidor al cliente (sin enviar datos desde el cliente), SSE es más simple y suficiente. Long polling es legacy — evitarlo en diseños nuevos.",
+      "cards": [
+        {"id": "net-websockets-1", "front": "¿Qué diferencia fundamental hay entre HTTP y WebSockets?", "back": "HTTP es request-response (el cliente siempre inicia); WebSockets es full-duplex: tanto cliente como servidor pueden enviar datos en cualquier momento.", "added": "2026-06-09"},
+        {"id": "net-websockets-2", "front": "¿Cómo se inicia una conexión WebSocket?", "back": "Con un HTTP Upgrade handshake: el cliente envía un request HTTP con 'Upgrade: websocket' y el servidor acepta convirtiendo la conexión.", "added": "2026-06-09"},
+        {"id": "net-websockets-3", "front": "¿Cuándo conviene usar SSE en lugar de WebSockets?", "back": "Cuando solo se necesitan datos del servidor al cliente (notificaciones, feeds). SSE es más simple porque es unidireccional.", "added": "2026-06-09"},
+        {"id": "net-websockets-4", "front": "Nombrá 3 casos de uso típicos para WebSockets.", "back": "Chat en tiempo real, colaboración en documentos (tipo Google Docs), y feeds de datos financieros o de trading.", "added": "2026-06-09"},
+        {"id": "net-websockets-5", "front": "¿Qué es long polling?", "back": "Una técnica donde el cliente hace un HTTP request y el servidor lo mantiene abierto hasta tener datos nuevos. Es legacy; WebSockets o SSE lo reemplazan.", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-cors",
+      "level": "jr",
+      "area": "redes",
+      "title": "CORS y same-origin policy",
+      "summary": "Por qué el browser bloquea algunos requests cross-site.",
+      "added": "2026-06-09",
+      "body": "La **same-origin policy** es una restricción de seguridad del browser: un script en `https://app.com` no puede hacer requests a `https://api.otro.com` sin permiso explícito. Dos URLs tienen el mismo origen si comparten **esquema, host y puerto**. Esta política protege a los usuarios de ataques donde una página maliciosa roba datos de otra.\n\n**CORS** (Cross-Origin Resource Sharing) es el mecanismo que permite al servidor declarar qué orígenes tienen permiso de acceder a sus recursos mediante headers como `Access-Control-Allow-Origin`. El browser intercepta los requests cross-origin y verifica estos headers antes de entregar la respuesta al JavaScript.\n\nPara requests que pueden modificar datos (métodos como PUT, DELETE, o POST con JSON), el browser primero envía una **preflight request**: un `OPTIONS` al servidor preguntando si el request real está permitido. Solo si el servidor responde afirmativamente con los headers correctos, el browser hace el request original.\n\n```mermaid\nflowchart TB\n  JS[JavaScript en app.com] --> Check{Es cross-origin}\n  Check --> Simple[Request simple GET con form]\n  Check --> Complex[Request complejo PUT DELETE JSON]\n  Complex --> Preflight[OPTIONS preflight al servidor]\n  Preflight --> CORSHeaders[Servidor responde con CORS headers]\n  CORSHeaders --> Real[Browser hace el request real]\n  Simple --> Direct[Browser hace el request directo]\n```\n\n## Ejemplo\n\n```http\n# Preflight que el browser envia automaticamente\nOPTIONS /api/users HTTP/1.1\nOrigin: https://app.com\nAccess-Control-Request-Method: POST\nAccess-Control-Request-Headers: Content-Type\n\n# Respuesta del servidor permitiendo el acceso\nHTTP/1.1 204 No Content\nAccess-Control-Allow-Origin: https://app.com\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE\nAccess-Control-Allow-Headers: Content-Type, Authorization\n```\n\n💡 **En la entrevista:** CORS es una restricción del **browser**, no del servidor. Un `curl` desde la terminal no está limitado por CORS. El error `CORS policy blocked` en la consola del browser significa que falta el header `Access-Control-Allow-Origin` en la respuesta del servidor, no que el servidor rechazó la conexión.",
+      "cards": [
+        {"id": "net-cors-1", "front": "¿Qué es la same-origin policy?", "back": "Una restricción del browser que impide que un script en un origen lea respuestas de otro origen diferente (esquema + host + puerto).", "added": "2026-06-09"},
+        {"id": "net-cors-2", "front": "¿Qué es una preflight request?", "back": "Un request OPTIONS que el browser envía automáticamente antes de requests cross-origin complejos, para verificar que el servidor permite el acceso.", "added": "2026-06-09"},
+        {"id": "net-cors-3", "front": "¿CORS es una restricción del servidor o del browser?", "back": "Del browser. Un curl o una app de servidor no está limitado por CORS; solo el JavaScript en el browser lo está.", "added": "2026-06-09"},
+        {"id": "net-cors-4", "front": "¿Qué header debe enviar el servidor para permitir acceso cross-origin?", "back": "Access-Control-Allow-Origin con el origen permitido (ej. https://app.com) o * para cualquier origen.", "added": "2026-06-09"},
+        {"id": "net-cors-5", "front": "¿Cuándo el browser hace una preflight request?", "back": "Cuando el request cross-origin usa métodos como PUT, DELETE, PATCH, o POST con Content-Type application/json, entre otros casos.", "added": "2026-06-09"}
+      ]
+    },
+    {
+      "id": "net-caching",
+      "level": "jr",
+      "area": "redes",
+      "title": "Caching HTTP: Cache-Control, ETag y CDN",
+      "summary": "Guardar respuestas para evitar requests innecesarios.",
+      "added": "2026-06-09",
+      "body": "El **caching HTTP** permite que browsers, proxies y CDNs almacenen respuestas y las sirvan sin consultar el servidor de origen. El servidor controla el comportamiento de caché mediante el header **`Cache-Control`**. Esto reduce latencia, ahorra ancho de banda y disminuye la carga del servidor.\n\nLas directivas más importantes de `Cache-Control`: `max-age=N` indica que la respuesta es fresca por N segundos; `no-cache` permite cachear pero exige revalidar con el servidor antes de cada uso; `no-store` prohíbe cualquier almacenamiento; `public` permite que proxies y CDNs cacheen; `private` solo el browser del usuario puede cachear.\n\n**ETag** (Entity Tag) es un mecanismo de **revalidación**: el servidor devuelve un hash del recurso en el header `ETag`. El browser lo guarda y en el siguiente request lo manda como `If-None-Match`. Si el recurso no cambió, el servidor responde `304 Not Modified` sin body, ahorrando transferencia de datos.\n\n```mermaid\nflowchart TB\n  Browser[Browser] --> CDN[CDN o Proxy]\n  CDN --> Check{En cache y fresco}\n  Check --> Hit[Cache HIT - responde sin ir al origen]\n  Check --> Miss[Cache MISS - pide al servidor origen]\n  Miss --> Origin[Servidor origen]\n  Origin --> Fresh[Respuesta con Cache-Control y ETag]\n  Fresh --> CDN\n  CDN --> Browser\n```\n\n## Ejemplo\n\n```http\n# Primera respuesta del servidor con ETag\nHTTP/1.1 200 OK\nCache-Control: public, max-age=3600\nETag: \"abc123\"\nContent-Type: application/json\n\n{\"data\": \"...\"}\n\n# Request posterior del browser revalidando\nGET /api/data HTTP/1.1\nIf-None-Match: \"abc123\"\n\n# Si no cambio, el servidor ahorra el body\nHTTP/1.1 304 Not Modified\nETag: \"abc123\"\n```\n\n💡 **En la entrevista:** `no-cache` no significa que no se cachea — significa que se cachea pero se revalida antes de usar. `no-store` sí prohíbe almacenar. La diferencia es importante. CDNs usan `s-maxage` para tener un tiempo de caché diferente al del browser.",
+      "cards": [
+        {"id": "net-caching-1", "front": "¿Qué hace Cache-Control: max-age=3600?", "back": "Le indica al browser (y CDNs) que la respuesta es fresca y puede usarse sin consultar al servidor durante 3600 segundos (1 hora).", "added": "2026-06-09"},
+        {"id": "net-caching-2", "front": "¿Qué diferencia hay entre no-cache y no-store?", "back": "no-cache permite cachear pero exige revalidar con el servidor antes de cada uso. no-store prohíbe almacenar la respuesta en cualquier caché.", "added": "2026-06-09"},
+        {"id": "net-caching-3", "front": "¿Para qué sirve el header ETag?", "back": "Para revalidación: el servidor envía un hash del recurso; el browser lo manda en If-None-Match y si no cambió el servidor responde 304 sin body.", "added": "2026-06-09"},
+        {"id": "net-caching-4", "front": "¿Qué significa un 304 Not Modified?", "back": "El recurso en caché del cliente sigue siendo válido. El servidor no envía body, ahorrando ancho de banda.", "added": "2026-06-09"},
+        {"id": "net-caching-5", "front": "¿Qué diferencia hay entre Cache-Control: public y private?", "back": "public permite que proxies y CDNs cacheen la respuesta; private solo permite que el browser del usuario la guarde.", "added": "2026-06-09"},
+        {"id": "net-caching-6", "front": "¿Qué es un CDN y cómo se relaciona con HTTP caching?", "back": "Una red de servidores distribuidos geográficamente que cachea respuestas cerca del usuario, usando Cache-Control para saber cuánto tiempo guardar cada recurso.", "added": "2026-06-09"}
+      ]
+    }
+  ]
+}

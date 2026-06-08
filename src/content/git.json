@@ -1,0 +1,467 @@
+{
+  "lessons": [
+    {
+      "id": "git-intro",
+      "level": "jr",
+      "area": "git",
+      "title": "¿Qué es Git? DVCS y conceptos base",
+      "summary": "Sistema distribuido: cada clon es un repo completo.",
+      "added": "2026-06-09",
+      "body": "**Git** es un sistema de control de versiones **distribuido** (DVCS). A diferencia de los sistemas centralizados (SVN, CVS), cada desarrollador tiene una copia completa del historial en su máquina local. No hay un servidor único que sea punto de fallo.\n\nGit almacena **instantáneas** (snapshots) del estado completo del proyecto en cada commit, no diferencias (diffs). Internamente, cada objeto se identifica por un hash SHA-1 de su contenido: eso garantiza integridad. Si un bit cambia, el hash cambia y Git lo detecta.\n\nLa carpeta **`.git/`** es el corazón del repositorio: guarda objetos (commits, trees, blobs), referencias (ramas, tags) y el puntero `HEAD` que indica en qué commit estás parado. El directorio de trabajo es solo un checkout de esos objetos.\n\n```mermaid\nflowchart LR\n  remoto[Repo remoto GitHub] -->|clone / fetch| local[Repo local completo]\n  local -->|push| remoto\n  local --> wd[Working directory]\n  local --> idx[Staging area index]\n  idx -->|commit| local\n```\n\n## Ejemplo\n\n```bash\ngit init mi-proyecto\ncd mi-proyecto\nls .git/\n# config  description  HEAD  hooks/  info/  objects/  refs/\n\n# Ver el tipo de un objeto git\ngit cat-file -t HEAD\n# commit\n```\n\n💡 **En la entrevista:** la diferencia clave entre Git y SVN es que Git es distribuido: cada clon es un backup completo. Con SVN, si cae el servidor, nadie puede versionar.",
+      "cards": [
+        {
+          "id": "git-intro-1",
+          "front": "¿Qué significa que Git es un sistema distribuido?",
+          "back": "Cada desarrollador tiene una copia completa del historial local. No hay un servidor único de fallo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-intro-2",
+          "front": "¿Git almacena diferencias (diffs) o instantáneas (snapshots)?",
+          "back": "Instantáneas del estado completo del proyecto en cada commit, no diffs entre versiones.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-intro-3",
+          "front": "¿Para qué sirve la carpeta .git/?",
+          "back": "Es el repositorio real: guarda objetos (commits, trees, blobs), referencias (ramas, tags) y el puntero HEAD.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-intro-4",
+          "front": "¿Cómo garantiza Git la integridad de los datos?",
+          "back": "Cada objeto se identifica con un hash SHA-1 de su contenido. Si un bit cambia, el hash cambia.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-intro-5",
+          "front": "¿Cuál es la diferencia entre repo local y repo remoto en Git?",
+          "back": "El repo local es la copia completa en tu máquina. El remoto (ej: GitHub) es un repo accesible en red que sirve para colaborar y sincronizar.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "git-workflow",
+      "level": "jr",
+      "area": "git",
+      "title": "Flujo básico: add, commit, status, log",
+      "summary": "Staging area: preparar cambios antes de commitear.",
+      "added": "2026-06-09",
+      "body": "El flujo de trabajo diario en Git tiene tres zonas: el **directorio de trabajo** (working directory), el **área de staging** (index) y el **repositorio**. Entender estas tres zonas es lo más importante para un junior.\n\n`git add` mueve cambios del directorio de trabajo al staging. `git commit` toma todo lo que está en staging y crea un nuevo objeto commit en el repositorio. Si modificás un archivo después de haberlo agregado al staging, tenés que hacer `git add` de nuevo para capturar la última versión.\n\n`git status` muestra en qué zona está cada archivo: sin seguimiento (untracked), modificado pero no staged, staged listo para commitear. `git log` muestra el historial de commits con hash, autor, fecha y mensaje. `git diff` muestra qué cambió: sin flags compara working directory vs staging; con `--staged` compara staging vs último commit.\n\n```mermaid\nflowchart LR\n  wd[Working directory] -->|git add| st[Staging area]\n  st -->|git commit| repo[Repositorio local]\n  repo -->|git checkout| wd\n```\n\n## Ejemplo\n\n```bash\ngit status\n# On branch main, nothing to commit\n\necho 'hola' > archivo.txt\ngit status -s\n# ?? archivo.txt  (untracked)\n\ngit add archivo.txt\ngit status -s\n# A  archivo.txt  (staged)\n\ngit commit -m 'agrego archivo inicial'\ngit log --oneline\n# a1b2c3d agrego archivo inicial\n\ngit diff --staged\n# (muestra lo que hay en staging vs ultimo commit)\n```\n\n💡 **En la entrevista:** el staging area existe para que puedas construir commits atómicos y precisos. Podés modificar 5 archivos pero commitear solo 2 relacionados.",
+      "cards": [
+        {
+          "id": "git-workflow-1",
+          "front": "¿Cuáles son las tres zonas del flujo de trabajo en Git?",
+          "back": "Working directory (archivos locales), staging area/index (cambios preparados para commit) y repositorio (historial de commits).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-workflow-2",
+          "front": "¿Qué hace git add?",
+          "back": "Mueve cambios del directorio de trabajo al staging area. No crea ningún commit todavía.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-workflow-3",
+          "front": "¿Para qué existe el staging area?",
+          "back": "Para construir commits precisos y atómicos: podés modificar muchos archivos pero commitear solo los relacionados.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-workflow-4",
+          "front": "¿Qué diferencia hay entre git diff y git diff --staged?",
+          "back": "git diff: compara working directory vs staging. git diff --staged: compara staging vs último commit.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-workflow-5",
+          "front": "¿Qué muestra git log --oneline?",
+          "back": "El historial de commits, una línea por commit: hash corto + mensaje.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "git-branches",
+      "level": "jr",
+      "area": "git",
+      "title": "Ramas (branches) y HEAD",
+      "summary": "Una rama es un puntero móvil a un commit.",
+      "added": "2026-06-09",
+      "body": "Una **rama** en Git es simplemente un puntero móvil a un commit. Pesa casi nada: es un archivo de 41 bytes con el hash del commit al que apunta. Crear una rama nueva es instantáneo.\n\n**HEAD** es un puntero especial que indica en qué commit o rama estás parado ahora mismo. Normalmente apunta a una rama (ej: `HEAD -> main`). Cuando hacés un commit, la rama a la que apunta HEAD avanza automáticamente al nuevo commit. Si HEAD apunta directo a un commit y no a una rama, estás en **detached HEAD**.\n\nTrabajar en ramas permite desarrollar features de forma aislada sin afectar `main`. El comando `git checkout -b <nombre>` crea la rama y te mueve a ella en un solo paso. `git switch` es la alternativa moderna y más clara para cambiar de rama.\n\n```mermaid\nflowchart LR\n  c1[commit A] --> c2[commit B] --> c3[commit C]\n  c3 --> main[main]\n  c2 --> feat[feature]\n  HEAD --> feat\n```\n\n## Ejemplo\n\n```bash\ngit branch\n# * main\n\ngit checkout -b feature/login\n# Switched to a new branch 'feature/login'\n\ngit branch\n# * feature/login\n#   main\n\ngit log --oneline --all --graph\n# * c3d4e5f (HEAD -> feature/login) agrego login\n# * a1b2c3d (main) commit inicial\n```\n\n💡 **En la entrevista:** HEAD detachado ocurre cuando hacés `git checkout <hash>` directo. Podés explorar pero si commitás sin crear rama, esos commits se pierden al cambiar de rama.",
+      "cards": [
+        {
+          "id": "git-branches-1",
+          "front": "¿Qué es una rama en Git?",
+          "back": "Un puntero móvil a un commit. Pesa ~41 bytes y crearla es instantáneo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-branches-2",
+          "front": "¿Qué es HEAD en Git?",
+          "back": "Un puntero especial que indica el commit o rama actual. Normalmente apunta a una rama.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-branches-3",
+          "front": "¿Qué pasa con la rama actual al hacer un nuevo commit?",
+          "back": "El puntero de la rama avanza automáticamente al nuevo commit.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-branches-4",
+          "front": "¿Qué significa estar en detached HEAD?",
+          "back": "HEAD apunta directo a un commit, no a una rama. Los commits que hagas ahí se pierden si cambiás de rama sin crear una nueva.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-branches-5",
+          "front": "¿Qué hace git checkout -b <nombre>?",
+          "back": "Crea una rama nueva y te mueve a ella en un solo paso.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "git-merge",
+      "level": "jr",
+      "area": "git",
+      "title": "Merge y sus estrategias",
+      "summary": "Fast-forward o merge commit según el historial.",
+      "added": "2026-06-09",
+      "body": "**Merge** integra los cambios de una rama en otra. Git usa dos estrategias principales según el historial de commits.\n\n**Fast-forward**: si la rama destino no tiene commits nuevos desde que se creó la feature, Git simplemente mueve el puntero hacia adelante. No crea ningún commit nuevo; es la opción más limpia. Ocurre cuando el historial es lineal.\n\n**Merge commit (3-way merge)**: si ambas ramas tienen commits nuevos desde que divergieron, Git encuentra el ancestro común, combina los cambios de ambas puntas y crea un nuevo **commit de merge** con dos padres. Preserva el historial completo y deja visible que hubo una línea de trabajo paralela.\n\nPodés forzar siempre un merge commit con `--no-ff` aunque la rama sea fast-forwardable. Esto es útil en equipos que quieren historial trazable por feature. `git log --graph` muestra el grafo completo.\n\n```mermaid\nflowchart LR\n  c1[commit A] --> c2[commit B]\n  c2 --> c3[commit C en main]\n  c2 --> c4[commit D en feature]\n  c3 --> m[merge commit M]\n  c4 --> m\n  m --> main2[main actualizado]\n```\n\n## Ejemplo\n\n```bash\n# Fast-forward (historial lineal)\ngit checkout main\ngit merge feature/login\n# Fast-forward\n\n# Merge commit (historial divergente o forzado)\ngit merge --no-ff feature/login\n# Merge made by the 'ort' strategy.\n\ngit log --oneline --graph\n# *   m7n8o9p Merge branch 'feature/login'\n# |\\  \n# | * c3d4e5f agrego login\n# |/  \n# * a1b2c3d commit inicial\n```\n\n💡 **En la entrevista:** fast-forward es posible solo si la rama base no avanzó desde que creaste la feature. Con `--no-ff` siempre queda registro de que la feature existió como rama separada.",
+      "cards": [
+        {
+          "id": "git-merge-1",
+          "front": "¿Cuándo ocurre un merge fast-forward?",
+          "back": "Cuando la rama destino no tiene commits nuevos desde que se creó la feature. Git solo mueve el puntero, sin crear commit nuevo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-merge-2",
+          "front": "¿Qué es un merge commit y cuándo se crea?",
+          "back": "Un commit con dos padres que Git crea cuando ambas ramas tienen commits divergentes. Une los cambios de ambas líneas.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-merge-3",
+          "front": "¿Qué hace git merge --no-ff?",
+          "back": "Fuerza la creación de un merge commit aunque sea posible hacer fast-forward. Deja trazabilidad de que existió una rama separada.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-merge-4",
+          "front": "¿Qué es un 3-way merge?",
+          "back": "Git encuentra el ancestro común de ambas ramas y combina los cambios de ambas puntas para crear el merge commit.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-merge-5",
+          "front": "¿Cómo ver el grafo completo de ramas y merges?",
+          "back": "git log --oneline --graph --all",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "git-rebase",
+      "level": "jr",
+      "area": "git",
+      "title": "Rebase y la regla de oro",
+      "summary": "Reescribe historial: commits nuevos con mismos cambios.",
+      "added": "2026-06-09",
+      "body": "**Rebase** toma los commits de tu rama y los **reproduce** uno a uno sobre otra base, creando commits nuevos con el mismo contenido pero diferente hash. El resultado es un historial lineal, como si siempre hubieras trabajado sobre la rama actualizada.\n\nLa diferencia con merge: rebase **reescribe el historial** (los commits originales desaparecen y aparecen otros con nuevos hashes). Merge **preserva el historial** tal como ocurrió, con un commit de merge explícito.\n\n**La regla de oro del rebase**: nunca hagas rebase de commits que ya subiste a un repositorio público y que otros pudieron haber usado como base. Si lo hacés, Git crea commits duplicados en el historial de tus colaboradores y genera caos. El rebase es seguro solo en ramas locales que todavía no empujaste.\n\n```mermaid\nflowchart TB\n  antes[Antes del rebase]\n  antes --> main1[main: A - B - C]\n  antes --> feat1[feature: A - B - D - E]\n  despues[Despues del rebase de feature sobre main]\n  despues --> main2[main: A - B - C]\n  despues --> feat2[feature: A - B - C - D2 - E2]\n```\n\n## Ejemplo\n\n```bash\n# Estoy en feature, quiero actualizarla sobre main\ngit checkout feature/login\ngit rebase main\n# Successfully rebased and updated refs/heads/feature/login\n\n# Ahora el merge a main es fast-forward\ngit checkout main\ngit merge feature/login\n\n# Rebase interactivo: reescribir los ultimos 3 commits\ngit rebase -i HEAD~3\n```\n\n💡 **En la entrevista:** la regla de oro: nunca rebase commits ya pusheados a una rama compartida. Para limpiar historial local antes de hacer push, rebase es perfecto.",
+      "cards": [
+        {
+          "id": "git-rebase-1",
+          "front": "¿Qué hace git rebase?",
+          "back": "Toma los commits de tu rama y los reproduce sobre otra base, creando commits nuevos con el mismo contenido pero diferente hash.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-rebase-2",
+          "front": "¿Cuál es la regla de oro del rebase?",
+          "back": "Nunca hagas rebase de commits que ya subiste a un repo público y que otros pudieron haber usado como base.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-rebase-3",
+          "front": "¿Qué diferencia hay entre merge y rebase?",
+          "back": "Merge preserva el historial con un commit de merge explícito. Rebase reescribe el historial para que sea lineal.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-rebase-4",
+          "front": "¿Para qué sirve git rebase -i?",
+          "back": "Rebase interactivo: permite reordenar, squashear, editar o eliminar commits antes de compartirlos.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-rebase-5",
+          "front": "¿Por qué el rebase genera caos cuando se hace sobre commits ya pusheados?",
+          "back": "Los commits originales y los rebased tienen distinto hash. Los colaboradores que basaron trabajo en los originales terminan con commits duplicados al hacer pull.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "git-conflicts",
+      "level": "jr",
+      "area": "git",
+      "title": "Resolución de conflictos",
+      "summary": "Conflicto cuando dos ramas editan la misma zona.",
+      "added": "2026-06-09",
+      "body": "Un **conflicto de merge** ocurre cuando dos ramas modificaron la misma parte del mismo archivo y Git no puede decidir automáticamente cuál versión conservar. Git pausa el merge y marca el archivo con delimitadores especiales para que vos elijas.\n\nEl archivo conflictuado tiene tres secciones: `<<<<<<< HEAD` marca lo que tenía tu rama actual, `=======` es el separador, y `>>>>>>> feature` marca lo que vino de la otra rama. Tu trabajo es **editar el archivo** hasta que quede como querés, sin esos marcadores.\n\nDespués de resolver, hacés `git add` del archivo resuelto para marcarlo como conflicto solucionado, y luego `git commit` para completar el merge. Si querés abortar el merge y volver al estado anterior, usás `git merge --abort`.\n\n```mermaid\nflowchart TB\n  start[git merge genera conflicto] --> edit[Editar archivos con conflicto]\n  edit --> add[git add archivos resueltos]\n  add --> commit[git commit completa el merge]\n  start --> abort[git merge --abort vuelve atras]\n```\n\n## Ejemplo\n\n```bash\ngit merge feature/login\n# CONFLICT (content): Merge conflict in src/auth.py\n# Automatic merge failed; fix conflicts and then commit the result.\n\n# El archivo muestra:\n# <<<<<<< HEAD\n# def login(): return 'v1'\n# =======\n# def login(): return 'v2'\n# >>>>>>> feature/login\n\n# Editamos src/auth.py y dejamos la version final\ngit add src/auth.py\ngit commit\n# (abre editor con mensaje pre-generado de merge)\n\n# Ver conflictos pendientes\ngit diff --check\n```\n\n💡 **En la entrevista:** los conflictos no son un error de Git, son una situación esperada. Herramientas como `git mergetool` o los editores con soporte Git (VS Code) facilitan la resolución visual.",
+      "cards": [
+        {
+          "id": "git-conflicts-1",
+          "front": "¿Cuándo ocurre un conflicto de merge en Git?",
+          "back": "Cuando dos ramas modificaron la misma parte del mismo archivo y Git no puede decidir automáticamente cuál versión conservar.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-conflicts-2",
+          "front": "¿Qué significan los marcadores <<<<<<< HEAD, ======= y >>>>>>> en un archivo con conflicto?",
+          "back": "<<<<<<< HEAD: versión de tu rama actual. =======: separador. >>>>>>> branch: versión de la rama que estás mergeando.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-conflicts-3",
+          "front": "¿Cómo se completa un merge después de resolver conflictos?",
+          "back": "1) Editar el archivo hasta que quede correcto. 2) git add <archivo>. 3) git commit.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-conflicts-4",
+          "front": "¿Cómo se aborta un merge en progreso?",
+          "back": "git merge --abort. Vuelve al estado anterior al merge como si nunca hubiera ocurrido.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-conflicts-5",
+          "front": "¿Son los conflictos un error de Git?",
+          "back": "No, son una situación esperada cuando dos ramas editan la misma zona. Git los detecta y te pide que decidas.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "git-remotes",
+      "level": "jr",
+      "area": "git",
+      "title": "Trabajo con remotos: fetch, pull, push",
+      "summary": "fetch descarga sin integrar; pull descarga e integra.",
+      "added": "2026-06-09",
+      "body": "Un **remoto** (remote) es un repositorio accesible en red. `origin` es el nombre que Git le da por defecto al remoto del que clonaste. Podés tener múltiples remotos.\n\n`git fetch` descarga todos los objetos y referencias nuevas del remoto a tu repo local **sin tocar** tu directorio de trabajo ni tus ramas. Es la operación más segura. `git pull` equivale a `git fetch` + `git merge` (o `git rebase` si configurás `pull.rebase true`). Por eso es menos predecible: puede generar merges o conflictos inesperados.\n\n**Rama de tracking**: cuando clonás o hacés `git push -u`, Git configura una rama local como rastreadora de una rama remota (ej: `main` trackea `origin/main`). `git status` te dice cuántos commits llevás de ventaja o de atraso respecto al remoto.\n\n```mermaid\nflowchart LR\n  rem[Remoto origin] -->|fetch| refs[origin/main local]\n  refs -->|merge o rebase| local[main local]\n  rem -->|pull = fetch + merge| local\n  local -->|push| rem\n```\n\n## Ejemplo\n\n```bash\n# Ver remotos configurados\ngit remote -v\n# origin  git@github.com:usuario/repo.git (fetch)\n# origin  git@github.com:usuario/repo.git (push)\n\n# Descargar sin integrar (seguro)\ngit fetch origin\ngit log main..origin/main --oneline\n# (muestra que tiene el remoto que vos no tenes)\n\n# Descargar e integrar\ngit pull origin main\n\n# Subir rama y configurar tracking\ngit push -u origin feature/login\n```\n\n💡 **En la entrevista:** preferir `git fetch` + revisar + `git merge` sobre `git pull` directo. Te da control total sobre qué integrás y cuándo.",
+      "cards": [
+        {
+          "id": "git-remotes-1",
+          "front": "¿Qué es origin en Git?",
+          "back": "El nombre por defecto que Git le da al remoto del que clonaste. Es solo un alias para la URL del remoto.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-remotes-2",
+          "front": "¿Qué diferencia hay entre git fetch y git pull?",
+          "back": "fetch solo descarga objetos y referencias sin tocar el working directory. pull = fetch + merge (o rebase), integrando los cambios.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-remotes-3",
+          "front": "¿Qué es una rama de tracking?",
+          "back": "Una rama local configurada para rastrear una rama remota (ej: main trackea origin/main). git status muestra cuántos commits de diferencia hay.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-remotes-4",
+          "front": "¿Para qué sirve git push -u?",
+          "back": "Sube la rama al remoto y configura el tracking automáticamente. Después podés usar git push/pull sin especificar remoto ni rama.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-remotes-5",
+          "front": "¿Por qué preferir fetch sobre pull en equipos?",
+          "back": "Fetch descarga sin integrar, dejándote revisar los cambios antes. Pull puede generar merges o conflictos inesperados sin que los hayas inspeccionado.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "git-pull-requests",
+      "level": "jr",
+      "area": "git",
+      "title": "Pull Requests y code review",
+      "summary": "PR: propuesta formal de integrar una rama.",
+      "added": "2026-06-09",
+      "body": "Un **Pull Request (PR)** es una propuesta formal para integrar los cambios de una rama en otra. No es una funcionalidad de Git en sí, sino de plataformas como GitHub, GitLab o Bitbucket. El flujo típico es: crear una rama, hacer commits, pushear, abrir un PR hacia `main`.\n\nEl PR tiene dos roles: **quién crea** (explica el cambio, sus motivaciones y cómo testear) y **quién revisa** (verifica correctitud, estilo, tests, y da feedback). Un buen título y descripción en el PR son tan importantes como el código: el revisor no tiene contexto de lo que estabas pensando.\n\n**CI/CD en el PR**: la mayoría de los equipos configura checks automáticos (tests, linting, cobertura) que deben pasar antes de que el PR pueda mergearse. Esto atrapa errores antes de que lleguen a `main`.\n\n```mermaid\nflowchart TB\n  rama[Branch con cambios] -->|git push| remote[Remoto]\n  remote -->|Abrir PR| review[Code review]\n  review -->|Cambios pedidos| rama\n  review -->|Aprobado| merge[Merge a main]\n  merge -->|CI pasa| deploy[Deploy]\n```\n\n## Ejemplo\n\n```bash\n# Crear rama y subir cambios\ngit checkout -b feature/agregar-login\ngit add .\ngit commit -m 'agrego pantalla de login'\ngit push -u origin feature/agregar-login\n\n# Desde GitHub/GitLab: abrir PR con titulo descriptivo\n# Titulo: 'Agrega pantalla de login con validacion de email'\n# Descripcion: que cambia, por que, como testear\n\n# Responder a review: hacer cambios, agregar commits\ngit add src/login.py\ngit commit -m 'corrijo validacion segun review'\ngit push\n```\n\n💡 **En la entrevista:** un buen PR es chico y enfocado en un solo cambio. PRs grandes con 50 archivos son difíciles de revisar y lentos de aprobar. Dividir en PRs pequeños es una habilidad profesional.",
+      "cards": [
+        {
+          "id": "git-pull-requests-1",
+          "front": "¿Qué es un Pull Request?",
+          "back": "Una propuesta formal para integrar los cambios de una rama en otra. Es una funcionalidad de plataformas como GitHub, no de Git en sí.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-pull-requests-2",
+          "front": "¿Qué debe incluir una buena descripción de PR?",
+          "back": "Qué cambia, por qué se hace el cambio, cómo testear, y links relevantes. El revisor no tiene el contexto del autor.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-pull-requests-3",
+          "front": "¿Para qué sirven los checks de CI en un PR?",
+          "back": "Ejecutan tests, linting y otros controles automáticos. Atrapan errores antes de que lleguen a la rama principal.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-pull-requests-4",
+          "front": "¿Qué hace un code reviewer en un PR?",
+          "back": "Verifica correctitud del código, estilo, cobertura de tests, y da feedback constructivo. Puede aprobar o pedir cambios.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-pull-requests-5",
+          "front": "¿Por qué se recomienda hacer PRs chicos y enfocados?",
+          "back": "Son más fáciles y rápidos de revisar, generan mejor feedback y reducen el riesgo de introducir bugs difíciles de rastrear.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "git-workflows",
+      "level": "jr",
+      "area": "git",
+      "title": "Gitflow y trunk-based development",
+      "summary": "Dos modelos: ramas largas vs. integración continua.",
+      "added": "2026-06-09",
+      "body": "Un **workflow de Git** es un acuerdo del equipo sobre cómo usar ramas. Los dos modelos más comunes son Gitflow y trunk-based development (TBD), y representan filosofías opuestas.\n\n**Gitflow** usa ramas de larga vida: `main` (producción), `develop` (integración), `feature/*`, `release/*`, `hotfix/*`. Cada feature vive en su propia rama hasta estar completa. Es predecible y controlado, bueno para software con ciclos de release largos (apps móviles, librerías versionadas) o equipos con muchos juniors que necesitan revisiones formales.\n\n**Trunk-based development (TBD)**: todos los devs integran a `main` (el trunk) varias veces por día. Las ramas de feature existen pero son muy cortas (1-2 días máximo). Requiere feature flags para código incompleto y una suite de tests sólida. Es el modelo que usan equipos de alto rendimiento con CI/CD maduro.\n\n```mermaid\nflowchart LR\n  gf[Gitflow]\n  gf --> dev[develop branch]\n  dev --> feat1[feature branch larga]\n  dev --> feat2[release branch]\n  tbd[Trunk-based]\n  tbd --> main1[main - todos integran rapido]\n  main1 --> ff[feature flags para WIP]\n```\n\n## Ejemplo\n\n```bash\n# Gitflow: iniciar feature\ngit checkout develop\ngit checkout -b feature/nueva-funcionalidad\n# ... commits ...\ngit checkout develop\ngit merge --no-ff feature/nueva-funcionalidad\ngit branch -d feature/nueva-funcionalidad\n\n# Trunk-based: rama corta e integracion rapida\ngit checkout -b fix/boton-login\ngit commit -m 'fix boton login'\ngit push -u origin fix/boton-login\n# Abrir PR -> merge a main en horas, no dias\n```\n\n💡 **En la entrevista:** no hay un modelo universalmente mejor. Gitflow da control; TBD da velocidad. La elección depende de la madurez del equipo, el tipo de producto y la cadencia de deploys.",
+      "cards": [
+        {
+          "id": "git-workflows-1",
+          "front": "¿Qué ramas principales usa Gitflow?",
+          "back": "main (producción), develop (integración), feature/*, release/*, hotfix/*. Ramas de larga vida.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-workflows-2",
+          "front": "¿Qué es trunk-based development?",
+          "back": "Todos los devs integran a main varias veces por día. Ramas muy cortas (1-2 días), feature flags para código incompleto.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-workflows-3",
+          "front": "¿Para qué tipo de proyectos es más adecuado Gitflow?",
+          "back": "Software con ciclos de release predecibles y largos (apps móviles, librerías versionadas) o equipos con muchos juniors.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-workflows-4",
+          "front": "¿Qué son los feature flags y para qué se usan en TBD?",
+          "back": "Condiciones en el código que habilitan o deshabilitan funcionalidades. Permiten mergear código incompleto a main sin que impacte en producción.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-workflows-5",
+          "front": "¿Qué ventaja clave tiene trunk-based development?",
+          "back": "Mayor velocidad de integración y menos conflictos: ramas cortas significan divergencias pequeñas y fáciles de resolver.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "git-advanced",
+      "level": "jr",
+      "area": "git",
+      "title": "Comandos avanzados cotidianos",
+      "summary": "stash, cherry-pick, bisect y reflog.",
+      "added": "2026-06-09",
+      "body": "Más allá del flujo básico, hay cuatro comandos que aparecen todo el tiempo en el día a día de un desarrollador.\n\n**`git stash`** guarda temporalmente los cambios no commiteados (working directory + staging) para que puedas cambiar de rama sin perderlos ni necesitar commitear trabajo incompleto. `git stash pop` recupera y aplica el último stash. Por defecto no incluye archivos untracked; usá `git stash -u` para incluirlos.\n\n**`git cherry-pick <hash>`** toma un commit específico de cualquier rama y lo aplica sobre tu rama actual, creando un commit nuevo con el mismo cambio. Útil para backportear un fix a una rama de producción sin mergear todo.\n\n**`git bisect`** hace una búsqueda binaria en el historial para encontrar el commit que introdujo un bug. Marcás un commit bueno y uno malo, y Git va preguntando por commits intermedios hasta acotar el culpable.\n\n**`git reflog`** es un log de todos los movimientos de HEAD, incluso resets y checkouts. Es el comando salvador cuando perdiste commits o destruiste trabajo accidentalmente.\n\n```mermaid\nflowchart TB\n  stash[git stash - guarda cambios temporales]\n  cp[git cherry-pick - copia un commit a otra rama]\n  bis[git bisect - busqueda binaria de bug]\n  ref[git reflog - historial completo de HEAD]\n```\n\n## Ejemplo\n\n```bash\n# Stash: guardar trabajo incompleto\ngit stash\ngit checkout hotfix/urgente\n# ... arreglo ...\ngit checkout feature/mi-tarea\ngit stash pop\n\n# Cherry-pick: traer un commit de main a release\ngit cherry-pick a1b2c3d\n\n# Bisect: encontrar cuando se rompio algo\ngit bisect start\ngit bisect bad HEAD\ngit bisect good v1.0\n# Git navega por commits; vos marcas good/bad hasta acotar\n\n# Reflog: recuperar commits 'perdidos'\ngit reflog\ngit checkout -b recuperado abc1234\n```\n\n💡 **En la entrevista:** `git reflog` es lo que usás cuando cometés un `git reset --hard` accidental. Los commits no se borran inmediatamente del objeto store; reflog te da el hash para recuperarlos.",
+      "cards": [
+        {
+          "id": "git-advanced-1",
+          "front": "¿Qué hace git stash?",
+          "back": "Guarda temporalmente los cambios no commiteados (working directory y staging) para que puedas cambiar de rama sin perderlos.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-advanced-2",
+          "front": "¿Qué hace git cherry-pick?",
+          "back": "Aplica un commit específico (por hash) sobre la rama actual, creando un commit nuevo con el mismo cambio.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-advanced-3",
+          "front": "¿Para qué sirve git bisect?",
+          "back": "Hace una búsqueda binaria en el historial para encontrar el commit que introdujo un bug. Necesitás marcar un commit bueno y uno malo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-advanced-4",
+          "front": "¿Qué es git reflog?",
+          "back": "Un log de todos los movimientos de HEAD. Permite recuperar commits perdidos después de resets o checkouts accidentales.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-advanced-5",
+          "front": "¿Cómo incluir archivos untracked en un stash?",
+          "back": "git stash -u (o --include-untracked). Por defecto stash solo guarda archivos trackeados.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-advanced-6",
+          "front": "¿Para qué caso de uso típico se usa cherry-pick?",
+          "back": "Backportear un hotfix a una rama de release o producción sin mergear todos los commits de development.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "git-config",
+      "level": "jr",
+      "area": "git",
+      "title": ".gitignore y configuración de Git",
+      "summary": "Excluir archivos y personalizar el comportamiento.",
+      "added": "2026-06-09",
+      "body": "**`.gitignore`** es un archivo de texto donde declarás patrones de archivos que Git debe ignorar completamente. Nunca aparecen en `git status`, nunca se commitean accidentalmente. Es crítico para no subir archivos de build, logs, credenciales o dependencias al repositorio.\n\nLos patrones usan globbing: `*` es comodín, `/` al final indica directorio, `!` niega un patrón (incluye lo que antes excluiste), `#` es comentario. Un `.gitignore` en la raíz aplica a todo el repo; podés tener uno por subdirectorio. Existe también `~/.gitignore_global` para patrones personales (ej: `.DS_Store` de macOS).\n\n**`git config`** configura el comportamiento de Git en tres niveles: `--system` (toda la máquina), `--global` (usuario actual, en `~/.gitconfig`) y `--local` (solo este repo, en `.git/config`). El nivel más específico tiene precedencia. Las configuraciones más importantes: `user.name`, `user.email`, `core.editor`, `pull.rebase`.\n\n```mermaid\nflowchart TB\n  conf[git config niveles]\n  conf --> sys[system - toda la maquina]\n  conf --> glob[global - usuario actual]\n  conf --> loc[local - solo este repo]\n  loc -->|mayor precedencia| precedencia[prevalece sobre global y system]\n```\n\n## Ejemplo\n\n```bash\n# Configuracion global inicial\ngit config --global user.name 'Tu Nombre'\ngit config --global user.email 'tu@email.com'\ngit config --global core.editor 'code --wait'\n\n# Ver toda la config y de donde viene cada valor\ngit config --list --show-origin\n\n# .gitignore tipico para proyecto Python\ncat .gitignore\n# __pycache__/\n# *.pyc\n# .env\n# venv/\n# dist/\n# .DS_Store\n\n# Verificar que un archivo esta ignorado\ngit check-ignore -v .env\n# .gitignore:4:.env  .env\n```\n\n💡 **En la entrevista:** si commiteaste accidentalmente un archivo que debería estar en `.gitignore`, agregarlo al `.gitignore` no lo quita del tracking. Hay que hacer `git rm --cached <archivo>` para dejar de trackearlo sin borrarlo del disco.",
+      "cards": [
+        {
+          "id": "git-config-1",
+          "front": "¿Para qué sirve el archivo .gitignore?",
+          "back": "Para declarar patrones de archivos que Git debe ignorar completamente: no aparecen en git status ni se commitean.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-config-2",
+          "front": "¿Qué hace el símbolo ! al inicio de un patrón en .gitignore?",
+          "back": "Niega el patrón: incluye en el tracking un archivo que un patrón anterior excluía.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-config-3",
+          "front": "¿Cuáles son los tres niveles de git config?",
+          "back": "--system (toda la máquina), --global (usuario actual, ~/.gitconfig), --local (solo este repo, .git/config). El más específico tiene precedencia.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-config-4",
+          "front": "Si commiteaste un archivo que debería estar en .gitignore, ¿cómo dejás de trackearlo sin borrarlo del disco?",
+          "back": "git rm --cached <archivo>. Esto lo quita del tracking pero lo conserva en el directorio de trabajo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-config-5",
+          "front": "¿Para qué sirve git check-ignore -v?",
+          "back": "Muestra qué patrón del .gitignore está ignorando un archivo. Útil para debuggear por qué un archivo no aparece en git status.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "git-config-6",
+          "front": "¿Qué es ~/.gitignore_global?",
+          "back": "Un .gitignore personal que aplica a todos los repos del usuario, sin commitearlo. Útil para patrones del SO como .DS_Store.",
+          "added": "2026-06-09"
+        }
+      ]
+    }
+  ]
+}

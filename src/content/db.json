@@ -1,0 +1,555 @@
+{
+  "lessons": [
+    {
+      "id": "db-modelo-relacional",
+      "level": "jr",
+      "area": "db",
+      "title": "Modelo relacional",
+      "summary": "Tablas, filas, columnas y restricciones.",
+      "added": "2026-06-09",
+      "body": "El **modelo relacional** organiza los datos en **tablas** (también llamadas relaciones). Cada tabla tiene **columnas** (atributos con nombre y tipo) y **filas** (registros concretos). Edgar Codd lo formalizó en 1970 y hoy es la base de PostgreSQL, MySQL, SQLite y la mayoría de las BDs en producción.\n\nCada fila representa una entidad única del mundo real. Las **restricciones** (constraints) son reglas que la BD aplica automáticamente para garantizar la integridad de los datos: no permiten insertar valores inválidos sin importar desde dónde venga la operación.\n\n```mermaid\nflowchart TB\n  t[(tabla usuarios)]\n  t --> col[columnas - id nombre email]\n  t --> fil[filas - registros concretos]\n  t --> con[restricciones - NOT NULL UNIQUE PK FK]\n```\n\n| Concepto | Qué es |\n|---|---|\n| Tabla | Conjunto de filas con el mismo esquema |\n| Columna | Atributo con nombre y tipo de dato |\n| Fila | Un registro concreto |\n| Clave primaria (PK) | Identifica cada fila unívocamente |\n| NOT NULL | La columna no puede quedar vacía |\n| UNIQUE | Dos filas no pueden tener el mismo valor |\n| CHECK | Valida una condición arbitraria |\n\n## Ejemplo\n\n```sql\nCREATE TABLE usuarios (\n  id       SERIAL       PRIMARY KEY,\n  email    VARCHAR(255) NOT NULL UNIQUE,\n  nombre   VARCHAR(100) NOT NULL,\n  pais     CHAR(2)      NOT NULL DEFAULT 'AR',\n  creado_en TIMESTAMP   NOT NULL DEFAULT NOW()\n);\n\n-- Esta insercion falla: email ya existe\nINSERT INTO usuarios (email, nombre) VALUES ('a@b.com', 'Ana');\nINSERT INTO usuarios (email, nombre) VALUES ('a@b.com', 'Beto'); -- ERROR\n```\n\n💡 **En la entrevista:** diferenciá tabla (estructura) de relación (término formal de Codd). Una restricción CHECK puede validar rangos: `CHECK (edad >= 0 AND edad < 120)`.",
+      "cards": [
+        {
+          "id": "db-modelo-relacional-1",
+          "front": "¿Qué es una tabla en el modelo relacional?",
+          "back": "Un conjunto de filas con el mismo esquema (columnas). Cada fila es un registro único.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-modelo-relacional-2",
+          "front": "¿Qué hace la restricción NOT NULL?",
+          "back": "Impide que una columna quede sin valor. La BD rechaza cualquier inserción o actualización que intente dejarla vacía.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-modelo-relacional-3",
+          "front": "¿Para qué sirve la restricción UNIQUE?",
+          "back": "Garantiza que ninguna otra fila tenga el mismo valor en esa columna (o combinación de columnas). Ejemplo: email único por usuario.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-modelo-relacional-4",
+          "front": "¿Cuál es la diferencia entre clave primaria y restricción UNIQUE?",
+          "back": "La PK es UNIQUE + NOT NULL + hay una sola por tabla. UNIQUE puede haber varias y admite NULL (en la mayoría de los motores).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-modelo-relacional-5",
+          "front": "¿Qué hace la restricción CHECK?",
+          "back": "Valida una condición arbitraria sobre la fila. Si la condición es falsa, la BD rechaza la operación. Ej: CHECK (precio > 0).",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-crud",
+      "level": "jr",
+      "area": "db",
+      "title": "CRUD en SQL",
+      "summary": "SELECT, INSERT, UPDATE y DELETE básicos.",
+      "added": "2026-06-09",
+      "body": "**CRUD** es el acrónimo de las cuatro operaciones fundamentales sobre datos: **Create, Read, Update, Delete**. En SQL se mapean a `INSERT`, `SELECT`, `UPDATE` y `DELETE`. Toda aplicación, sin importar su complejidad, se reduce a estas cuatro acciones en algún punto.\n\nLo crítico es entender **cuándo cada operación modifica estado**: `SELECT` es de solo lectura; las otras tres escriben y, si están dentro de una transacción, pueden deshacerse con `ROLLBACK`.\n\n```mermaid\nflowchart LR\n  app[Aplicacion] --> s[SELECT - Read]\n  app --> i[INSERT - Create]\n  app --> u[UPDATE - Update]\n  app --> d[DELETE - Delete]\n  s --> db[(Base de datos)]\n  i --> db\n  u --> db\n  d --> db\n```\n\n| Operación | SQL | ¿Modifica datos? |\n|---|---|---|\n| Create | INSERT | Sí |\n| Read | SELECT | No |\n| Update | UPDATE | Sí |\n| Delete | DELETE | Sí |\n\n## Ejemplo\n\n```sql\n-- CREATE: insertar un nuevo usuario\nINSERT INTO usuarios (email, nombre, pais)\nVALUES ('ana@example.com', 'Ana Garcia', 'AR');\n\n-- READ: leer usuarios de Argentina\nSELECT id, nombre, email\nFROM usuarios\nWHERE pais = 'AR';\n\n-- UPDATE: cambiar el email de Ana (siempre con WHERE)\nUPDATE usuarios\nSET email = 'ana.garcia@example.com'\nWHERE id = 1;\n\n-- DELETE: borrar un usuario (siempre con WHERE)\nDELETE FROM usuarios\nWHERE id = 1;\n```\n\n💡 **En la entrevista:** el error clásico es olvidar el `WHERE` en `UPDATE` o `DELETE`, lo que modifica **todas** las filas. Siempre preguntá si hay `WHERE` antes de ejecutar en producción.",
+      "cards": [
+        {
+          "id": "db-crud-1",
+          "front": "¿Qué significa CRUD?",
+          "back": "Create, Read, Update, Delete. Las cuatro operaciones fundamentales sobre datos.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-crud-2",
+          "front": "¿Cuál es el mapa de CRUD a SQL?",
+          "back": "Create → INSERT, Read → SELECT, Update → UPDATE, Delete → DELETE.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-crud-3",
+          "front": "¿Qué pasa si ejecutás UPDATE sin WHERE?",
+          "back": "Modifica TODAS las filas de la tabla. Es uno de los errores más comunes y costosos en producción.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-crud-4",
+          "front": "¿Cuál de las operaciones CRUD no modifica datos?",
+          "back": "SELECT (Read). Solo lee datos; no genera cambios en la base.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-crud-5",
+          "front": "¿Cómo insertar varias filas en un solo INSERT?",
+          "back": "Listando múltiples conjuntos de valores: INSERT INTO t (a, b) VALUES (1, 'x'), (2, 'y'), (3, 'z');",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-filtrado",
+      "level": "jr",
+      "area": "db",
+      "title": "Filtrado y ordenamiento",
+      "summary": "WHERE, LIKE, IN, ORDER BY y LIMIT.",
+      "added": "2026-06-09",
+      "body": "**Filtrar y ordenar** son las operaciones de lectura más frecuentes. La cláusula `WHERE` reduce las filas evaluando una condición booleana: solo pasan las filas donde la condición es verdadera. `ORDER BY` ordena el resultado y `LIMIT` recorta la cantidad de filas retornadas.\n\n`LIKE` permite comparaciones con comodines: `%` reemplaza cero o más caracteres, `_` reemplaza exactamente uno. `IN` evita escribir múltiples `OR` cuando comparás contra una lista fija de valores.\n\n```mermaid\nflowchart LR\n  t[(tabla)] --> w[WHERE filtra filas]\n  w --> o[ORDER BY ordena]\n  o --> l[LIMIT recorta]\n  l --> r[resultado final]\n```\n\n| Cláusula | Propósito | Ejemplo |\n|---|---|---|\n| WHERE col = val | Igualdad exacta | WHERE pais = 'AR' |\n| WHERE col LIKE patron | Patrón de texto | WHERE nombre LIKE 'An%' |\n| WHERE col IN (lista) | Uno de varios valores | WHERE pais IN ('AR', 'BR') |\n| ORDER BY col ASC/DESC | Ordenar resultados | ORDER BY creado_en DESC |\n| LIMIT n | Primeras n filas | LIMIT 10 |\n| OFFSET m | Saltar m filas | OFFSET 20 |\n\n## Ejemplo\n\n```sql\n-- Usuarios de Argentina o Brasil cuyo nombre empieza con A,\n-- ordenados por fecha descendente, primeros 5\nSELECT id, nombre, pais, creado_en\nFROM usuarios\nWHERE pais IN ('AR', 'BR')\n  AND nombre LIKE 'A%'\nORDER BY creado_en DESC\nLIMIT 5;\n\n-- Paginacion: pagina 3 con 10 filas por pagina\nSELECT * FROM productos\nORDER BY id\nLIMIT 10 OFFSET 20;\n```\n\n💡 **En la entrevista:** `LIKE '%texto%'` con comodín al principio no puede usar índice B-tree (hace full scan). Para búsqueda de texto en producción, usá `pg_trgm` o full-text search.",
+      "cards": [
+        {
+          "id": "db-filtrado-1",
+          "front": "¿Qué hace la cláusula WHERE?",
+          "back": "Filtra filas: solo pasan al resultado las filas donde la condición es verdadera.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-filtrado-2",
+          "front": "¿Qué significa % en LIKE?",
+          "back": "Reemplaza cero o más caracteres. LIKE 'A%' devuelve todo lo que empiece con A.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-filtrado-3",
+          "front": "¿Cuándo conviene usar IN en vez de múltiples OR?",
+          "back": "Cuando comparás una columna contra una lista fija de valores. WHERE pais IN ('AR', 'BR') es equivalente a WHERE pais = 'AR' OR pais = 'BR', pero más legible.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-filtrado-4",
+          "front": "¿Cómo paginás resultados en SQL?",
+          "back": "Con LIMIT y OFFSET. LIMIT 10 OFFSET 20 devuelve las filas 21 a 30 (página 3 con 10 por página).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-filtrado-5",
+          "front": "¿Por qué LIKE '%texto%' es lento en tablas grandes?",
+          "back": "El comodín al inicio impide usar índices B-tree, por lo que la BD lee toda la tabla (full scan). Para búsqueda de texto usá full-text search o pg_trgm.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-agregacion",
+      "level": "jr",
+      "area": "db",
+      "title": "Funciones de agregación y GROUP BY",
+      "summary": "COUNT, SUM, AVG agrupados con HAVING.",
+      "added": "2026-06-09",
+      "body": "Las **funciones de agregación** colapsan varias filas en un único valor. `COUNT` cuenta filas, `SUM` suma una columna numérica, `AVG` promedia, `MAX`/`MIN` dan el extremo. Sin `GROUP BY` se aplican a toda la tabla; con `GROUP BY` se aplican por grupo.\n\n**`GROUP BY`** divide el resultado en grupos según los valores de una o más columnas. **`HAVING`** filtra esos grupos (no filas individuales): es el `WHERE` de las agregaciones. El orden de evaluación importa: `WHERE` filtra antes de agrupar, `HAVING` filtra después.\n\n```mermaid\nflowchart TB\n  t[(tabla pedidos)]\n  t --> w[WHERE filtra filas]\n  w --> g[GROUP BY agrupa]\n  g --> ag[COUNT SUM AVG MAX MIN]\n  ag --> h[HAVING filtra grupos]\n  h --> r[resultado]\n```\n\n| Función | Qué retorna |\n|---|---|\n| COUNT(*) | Total de filas (incluye NULL) |\n| COUNT(col) | Filas donde col no es NULL |\n| SUM(col) | Suma de col |\n| AVG(col) | Promedio de col |\n| MAX / MIN | Valor máximo / mínimo |\n\n## Ejemplo\n\n```sql\n-- Total de pedidos y monto promedio por pais,\n-- solo paises con mas de 100 pedidos\nSELECT\n  u.pais,\n  COUNT(*)          AS total_pedidos,\n  AVG(p.total)      AS promedio_monto,\n  SUM(p.total)      AS suma_total\nFROM pedidos p\nJOIN usuarios u ON u.id = p.usuario_id\nWHERE p.estado = 'completado'\nGROUP BY u.pais\nHAVING COUNT(*) > 100\nORDER BY suma_total DESC;\n```\n\n💡 **En la entrevista:** `WHERE` no puede usar funciones de agregación; para eso existe `HAVING`. Pregunta trampa típica: filtrar por COUNT usando WHERE (incorrecto) vs HAVING (correcto).",
+      "cards": [
+        {
+          "id": "db-agregacion-1",
+          "front": "¿Cuál es la diferencia entre COUNT(*) y COUNT(columna)?",
+          "back": "COUNT(*) cuenta todas las filas incluyendo NULLs. COUNT(columna) solo cuenta las filas donde esa columna no es NULL.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-agregacion-2",
+          "front": "¿Para qué sirve GROUP BY?",
+          "back": "Divide el resultado en grupos según los valores de una columna. Las funciones de agregación se aplican por grupo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-agregacion-3",
+          "front": "¿Cuál es la diferencia entre WHERE y HAVING?",
+          "back": "WHERE filtra filas individuales antes de agrupar. HAVING filtra grupos después de aplicar la agregación.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-agregacion-4",
+          "front": "¿Puedo usar COUNT en una cláusula WHERE?",
+          "back": "No. WHERE no acepta funciones de agregación. Para filtrar por COUNT usá HAVING.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-agregacion-5",
+          "front": "¿Cuál es el orden de evaluación de una query con GROUP BY?",
+          "back": "FROM → WHERE → GROUP BY → funciones de agregación → HAVING → SELECT → ORDER BY → LIMIT.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-joins",
+      "level": "jr",
+      "area": "db",
+      "title": "Joins",
+      "summary": "Combinar filas de varias tablas.",
+      "added": "2026-06-09",
+      "body": "Un **JOIN** combina filas de dos tablas según una condición de igualdad (casi siempre una clave foránea). Sin JOIN, relacionar tablas implicaría múltiples queries desde la aplicación, generando el problema N+1.\n\n**INNER JOIN** devuelve solo filas con coincidencia en ambas tablas. **LEFT JOIN** devuelve todas las filas de la tabla izquierda, con NULL donde no hay coincidencia en la derecha. **RIGHT JOIN** es el espejo. **FULL JOIN** combina ambos: trae todo, con NULLs donde no hay match en ninguno de los dos lados.\n\n```mermaid\nflowchart LR\n  u[(usuarios)] --> j[JOIN]\n  p[(pedidos)] --> j\n  j --> inn[INNER - solo coincidencias]\n  j --> lft[LEFT - todos los usuarios]\n  j --> ful[FULL - todos de ambas tablas]\n```\n\n| Tipo | Devuelve |\n|---|---|\n| INNER JOIN | Solo filas con match en ambas tablas |\n| LEFT JOIN | Todas las filas de la izquierda + NULLs donde no hay match |\n| RIGHT JOIN | Todas las filas de la derecha + NULLs donde no hay match |\n| FULL JOIN | Todo de ambas tablas, NULLs donde no hay match |\n\n## Ejemplo\n\n```sql\n-- Todos los usuarios y sus pedidos (NULL si no tienen pedidos)\nSELECT u.nombre, p.total, p.estado\nFROM usuarios u\nLEFT JOIN pedidos p ON p.usuario_id = u.id;\n\n-- Usuarios SIN pedidos (LEFT JOIN + WHERE NULL)\nSELECT u.nombre\nFROM usuarios u\nLEFT JOIN pedidos p ON p.usuario_id = u.id\nWHERE p.id IS NULL;\n\n-- Pedidos con nombre de usuario (solo los que tienen usuario)\nSELECT p.id, u.nombre, p.total\nFROM pedidos p\nINNER JOIN usuarios u ON u.id = p.usuario_id;\n```\n\n💡 **En la entrevista:** LEFT JOIN + WHERE IS NULL es el patrón para encontrar filas sin match (usuarios sin pedidos, productos sin ventas). Mucho más eficiente que un subquery con NOT IN en tablas grandes.",
+      "cards": [
+        {
+          "id": "db-joins-1",
+          "front": "¿Qué devuelve un INNER JOIN?",
+          "back": "Solo las filas que tienen coincidencia en ambas tablas según la condición de JOIN.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-joins-2",
+          "front": "¿Qué devuelve un LEFT JOIN?",
+          "back": "Todas las filas de la tabla izquierda. Donde no hay coincidencia en la derecha, las columnas de la derecha son NULL.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-joins-3",
+          "front": "¿Cómo encontrás filas sin match usando JOIN?",
+          "back": "LEFT JOIN + WHERE col_derecha IS NULL. Ej: usuarios sin pedidos → LEFT JOIN pedidos WHERE pedidos.id IS NULL.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-joins-4",
+          "front": "¿Cuándo usarías FULL JOIN?",
+          "back": "Cuando necesitás todas las filas de ambas tablas, con NULLs donde no hay match en ninguno de los dos lados. Menos frecuente que INNER o LEFT.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-joins-5",
+          "front": "¿Qué problema resuelve JOIN respecto a hacer múltiples queries desde la app?",
+          "back": "Evita el problema N+1: en vez de hacer 1 query + N queries adicionales, hace todo en una sola ida a la BD.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-subqueries-ctes",
+      "level": "jr",
+      "area": "db",
+      "title": "Subqueries y CTEs",
+      "summary": "Queries anidadas y WITH para legibilidad.",
+      "added": "2026-06-09",
+      "body": "Una **subquery** es una query dentro de otra query. Puede estar en el `WHERE` (filtra con el resultado de otro SELECT), en el `FROM` (se comporta como una tabla temporal) o en el `SELECT` (devuelve un escalar por fila).\n\nLas **CTEs** (Common Table Expressions) con `WITH` son subqueries con nombre que se definen antes de la query principal. No cambian el rendimiento respecto a subqueries equivalentes en la mayoría de los motores, pero hacen el código **mucho más legible** al darle nombre a cada paso de lógica compleja.\n\n```mermaid\nflowchart TB\n  cte1[WITH pedidos_grandes AS query1]\n  cte2[WITH usuarios_activos AS query2]\n  cte1 --> main[SELECT FROM pedidos_grandes JOIN usuarios_activos]\n  cte2 --> main\n  main --> res[resultado final]\n```\n\n## Ejemplo\n\n```sql\n-- Subquery en WHERE: usuarios que hicieron algun pedido > 1000\nSELECT nombre\nFROM usuarios\nWHERE id IN (\n  SELECT usuario_id\n  FROM pedidos\n  WHERE total > 1000\n);\n\n-- CTE equivalente (mas legible)\nWITH pedidos_grandes AS (\n  SELECT usuario_id\n  FROM pedidos\n  WHERE total > 1000\n)\nSELECT u.nombre\nFROM usuarios u\nINNER JOIN pedidos_grandes pg ON pg.usuario_id = u.id;\n\n-- CTE recursiva: jerarquia de empleados\nWITH RECURSIVE jerarquia AS (\n  SELECT id, nombre, jefe_id, 0 AS nivel\n  FROM empleados WHERE jefe_id IS NULL\n  UNION ALL\n  SELECT e.id, e.nombre, e.jefe_id, j.nivel + 1\n  FROM empleados e\n  INNER JOIN jerarquia j ON j.id = e.jefe_id\n)\nSELECT * FROM jerarquia ORDER BY nivel;\n```\n\n💡 **En la entrevista:** preferí CTEs sobre subqueries anidadas cuando la lógica tiene más de un nivel de profundidad. Las CTEs recursivas son la solución estándar para árboles y grafos en SQL.",
+      "cards": [
+        {
+          "id": "db-subqueries-ctes-1",
+          "front": "¿Qué es una subquery?",
+          "back": "Una query anidada dentro de otra. Puede estar en WHERE (filtra), FROM (tabla temporal) o SELECT (valor escalar por fila).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-subqueries-ctes-2",
+          "front": "¿Qué es una CTE y cómo se define?",
+          "back": "Common Table Expression: una subquery con nombre definida antes de la query principal con la cláusula WITH. WITH nombre AS (SELECT ...).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-subqueries-ctes-3",
+          "front": "¿Las CTEs mejoran el rendimiento respecto a subqueries?",
+          "back": "No necesariamente. La ventaja es legibilidad, no performance. En PostgreSQL el optimizador suele tratarlas igual.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-subqueries-ctes-4",
+          "front": "¿Para qué sirven las CTEs recursivas?",
+          "back": "Para recorrer estructuras jerárquicas o grafos en SQL: árboles de empleados, categorías anidadas, rutas en un grafo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-subqueries-ctes-5",
+          "front": "¿Cuándo preferirías una CTE sobre una subquery en FROM?",
+          "back": "Cuando la lógica tiene más de un nivel de profundidad o cuando querés darle un nombre descriptivo a una parte del resultado para que el código sea más legible.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-normalizacion",
+      "level": "jr",
+      "area": "db",
+      "title": "Diseño de esquema y normalización",
+      "summary": "1NF, 2NF, 3NF: eliminar redundancia.",
+      "added": "2026-06-09",
+      "body": "**Normalizar** es organizar las tablas para eliminar redundancia y anomalías de datos. Las formas normales son reglas progresivas: cada una exige cumplir la anterior. Una BD mal normalizada presenta **anomalías de inserción, actualización y borrado**: si un dato aparece en 10 filas y lo cambiás en 9, tu BD queda inconsistente.\n\n**1NF** exige valores atómicos (una celda = un valor) y filas identificables por una PK. **2NF** elimina dependencias parciales: en tablas con clave compuesta, ninguna columna no-clave puede depender solo de una parte de la clave. **3NF** elimina dependencias transitivas: ninguna columna no-clave puede depender de otra columna no-clave.\n\n```mermaid\nflowchart TB\n  raw[Tabla sin normalizar - valores multiples, redundancia]\n  raw --> nf1[1NF - valores atomicos, sin grupos repetidos]\n  nf1 --> nf2[2NF - sin dependencias parciales]\n  nf2 --> nf3[3NF - sin dependencias transitivas]\n  nf3 --> clean[Esquema limpio y sin anomalias]\n```\n\n| Forma | Regla clave | Anomalía que elimina |\n|---|---|---|\n| 1NF | Valores atómicos, PK definida | Valores multivaluados |\n| 2NF | Sin dependencia parcial de clave compuesta | Datos duplicados por PK parcial |\n| 3NF | Sin dependencia transitiva entre no-clave | Actualizar A requiere actualizar B |\n\n## Ejemplo\n\n```sql\n-- Mal: ciudad depende de codigo_postal, no del pedido (dependencia transitiva)\nCREATE TABLE pedidos_malo (\n  pedido_id    INT PRIMARY KEY,\n  codigo_postal CHAR(4),\n  ciudad        VARCHAR(100)  -- depende de codigo_postal, no de pedido_id\n);\n\n-- 3NF: separar la dependencia transitiva\nCREATE TABLE ciudades (\n  codigo_postal CHAR(4) PRIMARY KEY,\n  ciudad        VARCHAR(100) NOT NULL\n);\n\nCREATE TABLE pedidos (\n  pedido_id     INT PRIMARY KEY,\n  codigo_postal CHAR(4) REFERENCES ciudades(codigo_postal)\n);\n```\n\n💡 **En la entrevista:** no normalices hasta BCNF por defecto; 3NF es el punto de equilibrio para la mayoría de los sistemas. Desnormalizar (conscientemente) puede ser una decisión válida de performance en tablas de lectura masiva.",
+      "cards": [
+        {
+          "id": "db-normalizacion-1",
+          "front": "¿Qué es normalizar una base de datos?",
+          "back": "Organizar tablas para eliminar redundancia y anomalías (inserción, actualización, borrado).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-normalizacion-2",
+          "front": "¿Qué exige la Primera Forma Normal (1NF)?",
+          "back": "Valores atómicos (una celda = un valor) y filas identificables por una clave primaria. Sin grupos repetidos.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-normalizacion-3",
+          "front": "¿Qué elimina la Segunda Forma Normal (2NF)?",
+          "back": "Dependencias parciales: ninguna columna no-clave puede depender solo de una parte de una clave primaria compuesta.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-normalizacion-4",
+          "front": "¿Qué elimina la Tercera Forma Normal (3NF)?",
+          "back": "Dependencias transitivas: ninguna columna no-clave puede depender de otra columna no-clave. Todo depende solo de la PK.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-normalizacion-5",
+          "front": "¿Cuál es el riesgo de una tabla con datos redundantes?",
+          "back": "Anomalías de actualización: si un dato aparece en 10 filas y solo actualizás 9, la BD queda inconsistente.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-claves-indices",
+      "level": "jr",
+      "area": "db",
+      "title": "Claves primarias, foráneas e índices",
+      "summary": "Integridad referencial y búsqueda rápida.",
+      "added": "2026-06-09",
+      "body": "La **clave primaria (PK)** identifica cada fila de forma única. La **clave foránea (FK)** referencia la PK de otra tabla, implementando integridad referencial: la BD rechaza automáticamente insertar un pedido con un `usuario_id` que no existe en la tabla `usuarios`.\n\nUn **índice** es una estructura de datos auxiliar (por defecto B-tree en PostgreSQL) que la BD mantiene actualizada para acelerar búsquedas. Sin índice, cada `SELECT` con `WHERE` escanea toda la tabla (seq scan). Con índice, navega el árbol en O(log n). El costo: los índices ralentizan los `INSERT`/`UPDATE`/`DELETE` porque hay que mantenerlos.\n\n```mermaid\nflowchart LR\n  u[(usuarios - PK id)]\n  p[(pedidos - FK usuario_id)]\n  p --> u\n  idx[Indice B-tree en pedidos.usuario_id]\n  idx --> p\n```\n\n| Concepto | Propósito |\n|---|---|\n| PRIMARY KEY | Identifica filas unívocamente, implica índice único |\n| FOREIGN KEY | Integridad referencial entre tablas |\n| INDEX B-tree | Acelera WHERE, ORDER BY, JOIN en columnas de alta cardinalidad |\n| UNIQUE INDEX | Índice + restricción de unicidad |\n| Índice parcial | Indexa solo filas que cumplen una condición |\n\n## Ejemplo\n\n```sql\n-- Clave foranea con comportamiento en cascade\nCREATE TABLE pedidos (\n  id          SERIAL PRIMARY KEY,\n  usuario_id  INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,\n  total       NUMERIC(10,2) NOT NULL,\n  creado_en   TIMESTAMP NOT NULL DEFAULT NOW()\n);\n\n-- Indice en columna de busqueda frecuente\nCREATE INDEX idx_pedidos_usuario ON pedidos(usuario_id);\n\n-- Indice parcial: solo pedidos pendientes (tabla chica, busqueda frecuente)\nCREATE INDEX idx_pedidos_pendientes ON pedidos(creado_en)\nWHERE estado = 'pendiente';\n\n-- Ver si la query usa el indice\nEXPLAIN SELECT * FROM pedidos WHERE usuario_id = 42;\n```\n\n💡 **En la entrevista:** no indexar todo. Los índices tienen costo de escritura y espacio. Indexar columnas que aparecen en WHERE, JOIN y ORDER BY de queries frecuentes. Cardinalidad alta (muchos valores distintos) = índice más útil.",
+      "cards": [
+        {
+          "id": "db-claves-indices-1",
+          "front": "¿Qué garantiza una clave foránea (FK)?",
+          "back": "Integridad referencial: la BD rechaza insertar un registro que referencia una PK inexistente en la tabla padre.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-claves-indices-2",
+          "front": "¿Cómo funciona un índice B-tree?",
+          "back": "Es un árbol balanceado que permite encontrar valores en O(log n) en vez de escanear toda la tabla en O(n).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-claves-indices-3",
+          "front": "¿Cuál es el costo de tener muchos índices?",
+          "back": "Los índices aceleran SELECT pero ralentizan INSERT, UPDATE y DELETE porque la BD debe mantenerlos actualizados.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-claves-indices-4",
+          "front": "¿Qué hace ON DELETE CASCADE en una FK?",
+          "back": "Borra automáticamente las filas hijas cuando se borra la fila padre. Si borrás un usuario, se borran sus pedidos.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-claves-indices-5",
+          "front": "¿Qué es un índice parcial?",
+          "back": "Un índice que solo incluye filas que cumplen una condición. Ej: INDEX WHERE estado = 'pendiente'. Más pequeño y eficiente si solo consultás ese subconjunto.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-claves-indices-6",
+          "front": "¿En qué columnas conviene crear índices?",
+          "back": "En columnas que aparecen seguido en WHERE, JOIN y ORDER BY, y que tienen alta cardinalidad (muchos valores distintos).",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-transacciones",
+      "level": "jr",
+      "area": "db",
+      "title": "Transacciones y ACID",
+      "summary": "Atomicidad, consistencia, aislamiento y durabilidad.",
+      "added": "2026-06-09",
+      "body": "Una **transacción** es un conjunto de operaciones que se ejecutan como una unidad: o todas tienen éxito o ninguna. **ACID** describe las cuatro propiedades que garantizan que las transacciones son confiables, incluso ante fallos de red, crashes o accesos concurrentes.\n\n**Atomicidad**: todo o nada. Si falla algún paso, se hace ROLLBACK automático. **Consistencia**: la BD siempre pasa de un estado válido a otro válido (las restricciones se mantienen). **Aislamiento**: las transacciones concurrentes no se ven entre sí hasta que terminan (según el nivel de aislamiento). **Durabilidad**: una vez confirmada (COMMIT), la transacción sobrevive a cualquier fallo.\n\n```mermaid\nflowchart TB\n  tx[BEGIN transaccion]\n  tx --> op1[operacion 1 - debitar cuenta A]\n  op1 --> op2[operacion 2 - acreditar cuenta B]\n  op2 --> ok{Todo OK}\n  ok --> |Si| com[COMMIT - cambios permanentes]\n  ok --> |No| rb[ROLLBACK - deshacer todo]\n```\n\n| Propiedad | Qué garantiza |\n|---|---|\n| Atomicidad | Todo o nada |\n| Consistencia | Las restricciones se mantienen siempre |\n| Aislamiento | Transacciones concurrentes no se interfieren |\n| Durabilidad | COMMIT = cambio permanente, incluso ante crash |\n\n## Ejemplo\n\n```sql\n-- Transferencia bancaria: ACID en accion\nBEGIN;\n\nUPDATE cuentas\nSET saldo = saldo - 1000\nWHERE id = 1 AND saldo >= 1000;\n\n-- Si la cuenta no tenia saldo suficiente, affectedRows = 0\n-- La app puede detectar esto y hacer ROLLBACK\n\nUPDATE cuentas\nSET saldo = saldo + 1000\nWHERE id = 2;\n\nCOMMIT;\n\n-- Si algo falla entre BEGIN y COMMIT:\nROLLBACK; -- deshace todo, la plata no va a ningun lado\n```\n\n💡 **En la entrevista:** el ejemplo clásico de ACID es la transferencia bancaria. Si el sistema crashea después de debitar pero antes de acreditar, la Atomicidad garantiza que el débito se revierte. PostgreSQL implementa esto con WAL (Write-Ahead Log).",
+      "cards": [
+        {
+          "id": "db-transacciones-1",
+          "front": "¿Qué es una transacción en bases de datos?",
+          "back": "Un conjunto de operaciones que se ejecutan como una unidad atómica: o todas tienen éxito (COMMIT) o ninguna (ROLLBACK).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-transacciones-2",
+          "front": "¿Qué significa la A de ACID?",
+          "back": "Atomicidad: todo o nada. Si falla cualquier operación de la transacción, se deshace todo lo anterior automáticamente.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-transacciones-3",
+          "front": "¿Qué significa la I de ACID (Aislamiento)?",
+          "back": "Las transacciones concurrentes no se ven entre sí hasta que hacen COMMIT. Evita lecturas de datos a medio escribir.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-transacciones-4",
+          "front": "¿Qué garantiza la D de ACID (Durabilidad)?",
+          "back": "Una vez confirmada (COMMIT), la transacción es permanente aunque el servidor se caiga inmediatamente después.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-transacciones-5",
+          "front": "¿Qué hace ROLLBACK?",
+          "back": "Deshace todas las operaciones de la transacción actual, dejando la BD exactamente como estaba antes del BEGIN.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-transacciones-6",
+          "front": "¿Qué mecanismo usa PostgreSQL para garantizar Durabilidad?",
+          "back": "WAL (Write-Ahead Log): escribe los cambios en un log antes de aplicarlos a los datos. Si hay crash, replaya el log para recuperar el estado.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-n-plus-one",
+      "level": "jr",
+      "area": "db",
+      "title": "Problema N+1 y EXPLAIN",
+      "summary": "Detectar y eliminar queries innecesarias.",
+      "added": "2026-06-09",
+      "body": "El **problema N+1** ocurre cuando una app hace 1 query para obtener N registros y luego N queries adicionales (una por cada registro) para obtener datos relacionados. Si tenés 500 usuarios, termina ejecutando 501 queries en vez de 1. Es uno de los problemas de performance más comunes en aplicaciones con ORM.\n\n**EXPLAIN** muestra el plan de ejecución que el motor va a usar sin ejecutar la query. **EXPLAIN ANALYZE** sí la ejecuta y muestra tiempos reales. Usá EXPLAIN para entender si la BD está usando índices, haciendo seq scan, o cuánto cuesta cada paso.\n\n```mermaid\nflowchart TB\n  app[Aplicacion]\n  app --> q1[SELECT todos los usuarios - 1 query]\n  q1 --> loop[Por cada usuario]\n  loop --> qn[SELECT pedidos WHERE usuario_id = X]\n  qn --> loop\n  loop --> tot[Total 1 mas N queries]\n  tot --> sol[SOLUCION JOIN o eager loading]\n```\n\n| Comando | Qué hace |\n|---|---|\n| EXPLAIN query | Muestra el plan sin ejecutar |\n| EXPLAIN ANALYZE query | Ejecuta y muestra tiempos reales |\n| Seq Scan | Escaneo completo de tabla (sin índice) |\n| Index Scan | Usa índice para navegar |\n| Nested Loop | Join por iteración (puede ser N+1 en el plan) |\n\n## Ejemplo\n\n```sql\n-- MAL: la app hace esto en un loop (N+1)\nSELECT * FROM usuarios;\n-- luego, para cada usuario:\nSELECT * FROM pedidos WHERE usuario_id = 1;\nSELECT * FROM pedidos WHERE usuario_id = 2;\n-- ...501 queries en total\n\n-- BIEN: un solo JOIN\nSELECT u.id, u.nombre, p.id AS pedido_id, p.total\nFROM usuarios u\nLEFT JOIN pedidos p ON p.usuario_id = u.id;\n\n-- Diagnosticar con EXPLAIN ANALYZE\nEXPLAIN ANALYZE\nSELECT u.nombre, p.total\nFROM usuarios u\nINNER JOIN pedidos p ON p.usuario_id = u.id\nWHERE u.pais = 'AR';\n-- Busca: Seq Scan en tablas grandes = falta indice\n-- Index Scan / Bitmap Scan = usa indice (bien)\n```\n\n💡 **En la entrevista:** el N+1 es el bug de performance más fácil de introducir con ORMs (Hibernate, ActiveRecord, SQLAlchemy). Se detecta logueando las queries ejecutadas o con herramientas como Django Debug Toolbar. La solución es eager loading o un JOIN explícito.",
+      "cards": [
+        {
+          "id": "db-n-plus-one-1",
+          "front": "¿Qué es el problema N+1?",
+          "back": "Hacer 1 query para N registros y luego N queries adicionales para datos relacionados. Total: N+1 queries en vez de 1.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-n-plus-one-2",
+          "front": "¿Cuál es la solución al problema N+1?",
+          "back": "Reemplazar el loop de queries con un JOIN que trae todo en una sola query, o usar eager loading en el ORM.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-n-plus-one-3",
+          "front": "¿Qué diferencia hay entre EXPLAIN y EXPLAIN ANALYZE?",
+          "back": "EXPLAIN muestra el plan estimado sin ejecutar la query. EXPLAIN ANALYZE la ejecuta y muestra tiempos y filas reales.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-n-plus-one-4",
+          "front": "¿Qué indica un Seq Scan en el output de EXPLAIN?",
+          "back": "La BD está leyendo toda la tabla fila por fila sin usar índice. En tablas grandes es señal de que falta un índice.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-n-plus-one-5",
+          "front": "¿Cómo se detecta N+1 en una app con ORM?",
+          "back": "Logueando las queries ejecutadas o usando herramientas de profiling (Django Debug Toolbar, Bullet gem). Se ven N queries casi idénticas en loop.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-sql-vs-nosql",
+      "level": "jr",
+      "area": "db",
+      "title": "SQL vs NoSQL",
+      "summary": "Cuándo usar cada tipo de base de datos.",
+      "added": "2026-06-09",
+      "body": "**SQL** (relacional): datos en tablas con esquema fijo, joins entre tablas, transacciones ACID, consistencia fuerte. Ejemplos: PostgreSQL, MySQL, SQLite. **NoSQL** no es un tipo sino una familia: documentos (MongoDB), clave-valor (Redis), columnar (Cassandra), grafos (Neo4j). Sin esquema rígido, escalan horizontalmente con más facilidad.\n\nNo hay un ganador universal. En 2026, PostgreSQL es la BD más popular en el Stack Overflow Developer Survey y soporta JSON nativamente, acercándose a casos de uso de documentos. El patrón **polyglot persistence** usa SQL para datos transaccionales y NoSQL para casos especializados (caché, full-text, tiempo real).\n\n```mermaid\nflowchart LR\n  req[Requisito]\n  req --> rel[Datos relacionales con JOIN - SQL]\n  req --> doc[Documentos variables sin JOIN - MongoDB]\n  req --> cac[Cache de alta velocidad - Redis]\n  req --> txt[Busqueda full text - Elasticsearch]\n  req --> gra[Grafos de relaciones - Neo4j]\n```\n\n| Criterio | SQL | NoSQL |\n|---|---|---|\n| Esquema | Fijo, estricto | Flexible, dinámico |\n| Relaciones | JOINs nativos | Embebido o manual |\n| Consistencia | ACID fuerte | Eventual (mayoría) |\n| Escala | Vertical (y algo horizontal) | Horizontal nativo |\n| Uso típico | Transacciones, reportes | Caché, logs, docs |\n\n## Ejemplo\n\n```sql\n-- PostgreSQL soporta JSON: lo mejor de ambos mundos\nCREATE TABLE productos (\n  id      SERIAL PRIMARY KEY,\n  nombre  VARCHAR(200) NOT NULL,\n  atribs  JSONB         -- campo NoSQL dentro de SQL\n);\n\nINSERT INTO productos (nombre, atribs)\nVALUES ('Campera', '{\"color\": \"azul\", \"talle\": \"M\", \"material\": \"cuero\"}');\n\n-- Query sobre campo JSON con indice GIN\nSELECT nombre FROM productos\nWHERE atribs->>'color' = 'azul';\n\nCREATE INDEX idx_prod_atribs ON productos USING GIN(atribs);\n```\n\n💡 **En la entrevista:** la respuesta default es PostgreSQL. Justificá NoSQL solo cuando tengas un requisito concreto: escala horizontal masiva, esquema que cambia semana a semana, latencia sub-milisegundo para caché. Sin ese requisito, SQL gana en integridad, herramientas y ecosistema.",
+      "cards": [
+        {
+          "id": "db-sql-vs-nosql-1",
+          "front": "¿Cuál es la diferencia principal entre SQL y NoSQL?",
+          "back": "SQL: esquema fijo, tablas relacionadas, ACID fuerte. NoSQL: esquema flexible, distintos modelos de datos (documento, clave-valor, grafo), escala horizontal más fácil.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-sql-vs-nosql-2",
+          "front": "¿Qué es polyglot persistence?",
+          "back": "Usar distintos tipos de BD según el caso: SQL para transacciones, Redis para caché, Elasticsearch para búsqueda, etc. Cada herramienta para lo que es buena.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-sql-vs-nosql-3",
+          "front": "¿Cuándo justificarías usar MongoDB en vez de PostgreSQL?",
+          "back": "Cuando el esquema cambia muy frecuentemente, el modelo es de documentos sin joins, o necesitás escala horizontal masiva con datos no relacionales.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-sql-vs-nosql-4",
+          "front": "¿Para qué usarías Redis?",
+          "back": "Caché de alta velocidad (latencia sub-milisegundo), sesiones de usuario, colas simples, rate limiting. No reemplaza a una BD relacional.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-sql-vs-nosql-5",
+          "front": "¿Cómo maneja PostgreSQL datos semiestructurados tipo NoSQL?",
+          "back": "Con el tipo JSONB: almacena JSON binario comprimido con soporte de índices GIN, permitiendo queries eficientes sobre campos JSON.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-vistas-sp-triggers",
+      "level": "jr",
+      "area": "db",
+      "title": "Vistas, stored procedures y triggers",
+      "summary": "Lógica y abstracción dentro de la BD.",
+      "added": "2026-06-09",
+      "body": "Una **vista** (VIEW) es una query guardada con nombre que se comporta como tabla de solo lectura. No duplica datos: cada vez que la consultás, ejecuta la query subyacente. Las vistas **materialized** sí guardan el resultado en disco y requieren refresh manual.\n\nUn **stored procedure** (o función) es lógica SQL almacenada en la BD y reutilizable. Reduce el tráfico red-app (manda una llamada en vez de múltiples queries), pero mueve lógica a la BD, lo que dificulta el versionado y testing. Un **trigger** es código que se ejecuta automáticamente ante un evento (INSERT, UPDATE, DELETE), sin que la app lo llame explícitamente.\n\n```mermaid\nflowchart TB\n  app[Aplicacion]\n  app --> v[VIEW - query con nombre]\n  app --> sp[FUNCTION PROCEDURE - logica en BD]\n  ev[Evento INSERT UPDATE DELETE] --> tr[TRIGGER - ejecucion automatica]\n  v --> db[(BD)]\n  sp --> db\n  tr --> db\n```\n\n| Objeto | Propósito | Ejecutado por |\n|---|---|---|\n| VIEW | Abstrae una query compleja | La app, como si fuera tabla |\n| MATERIALIZED VIEW | Caché de query en disco | La app + REFRESH manual |\n| FUNCTION / PROCEDURE | Lógica reutilizable en BD | La app explícitamente |\n| TRIGGER | Reacción automática a evento | La BD, automáticamente |\n\n## Ejemplo\n\n```sql\n-- Vista: abstrae el JOIN pedidos + usuarios\nCREATE VIEW v_pedidos_usuario AS\nSELECT p.id, u.nombre, u.email, p.total, p.estado\nFROM pedidos p\nINNER JOIN usuarios u ON u.id = p.usuario_id;\n\n-- Usarla como si fuera una tabla\nSELECT * FROM v_pedidos_usuario WHERE estado = 'pendiente';\n\n-- Trigger: actualizar timestamp al modificar una fila\nCREATE OR REPLACE FUNCTION set_updated_at()\nRETURNS TRIGGER AS $$\nBEGIN\n  NEW.updated_at = NOW();\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;\n\nCREATE TRIGGER trg_usuarios_updated\nBEFORE UPDATE ON usuarios\nFOR EACH ROW EXECUTE FUNCTION set_updated_at();\n```\n\n💡 **En la entrevista:** los triggers son poderosos pero peligrosos: disparan lógica oculta que la app no ve, dificultan el debugging y pueden causar efectos en cascada. Usalos para casos acotados (auditoría, timestamps automáticos); la lógica de negocio va en la aplicación.",
+      "cards": [
+        {
+          "id": "db-vistas-sp-triggers-1",
+          "front": "¿Qué es una VIEW en SQL?",
+          "back": "Una query guardada con nombre que se comporta como tabla de solo lectura. No duplica datos: ejecuta la query cada vez que se consulta.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-vistas-sp-triggers-2",
+          "front": "¿Cuál es la diferencia entre VIEW y MATERIALIZED VIEW?",
+          "back": "VIEW ejecuta la query en tiempo real. MATERIALIZED VIEW guarda el resultado en disco; es más rápida pero requiere REFRESH manual para actualizarse.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-vistas-sp-triggers-3",
+          "front": "¿Qué es un TRIGGER?",
+          "back": "Código que la BD ejecuta automáticamente ante un evento (INSERT, UPDATE, DELETE) sin que la app lo llame. Ej: actualizar updated_at.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-vistas-sp-triggers-4",
+          "front": "¿Cuál es el riesgo de abusar de los triggers?",
+          "back": "Ejecutan lógica oculta invisible para la app, dificultan el debugging y pueden desencadenar efectos en cascada difíciles de rastrear.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-vistas-sp-triggers-5",
+          "front": "¿Qué ventaja tiene un stored procedure sobre múltiples queries desde la app?",
+          "back": "Reduce el tráfico red-BD: manda una sola llamada en vez de múltiples queries. Útil cuando la lógica requiere muchos pasos SQL.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "db-migraciones",
+      "level": "jr",
+      "area": "db",
+      "title": "Migraciones de base de datos",
+      "summary": "Versionar cambios de esquema con seguridad.",
+      "added": "2026-06-09",
+      "body": "Una **migración** es un archivo que describe un cambio en el esquema de la BD (crear tabla, agregar columna, modificar índice). Las migraciones se versionan junto al código y se aplican en orden. Esto garantiza que cualquier entorno (dev, staging, prod) pueda reproducir el mismo esquema.\n\nLas herramientas más populares son **Flyway** y **Liquibase** (agnósticas de lenguaje) y las migraciones incluidas en frameworks: Alembic (Python/SQLAlchemy), Django migrations, ActiveRecord (Rails). La regla fundamental: **cada migración debe ser reversible** (tener un `down` que deshace el `up`).\n\n```mermaid\nflowchart LR\n  code[Codigo - git] --> m1[001_create_users.sql]\n  m1 --> m2[002_add_email_index.sql]\n  m2 --> m3[003_add_pais_column.sql]\n  m3 --> db[(BD actualizada)]\n  db --> hist[Tabla de historial de migraciones]\n```\n\n| Práctica | Por qué |\n|---|---|\n| Archivos numerados secuencialmente | Garantiza orden de aplicación |\n| Una migración = un cambio lógico | Fácil de hacer rollback |\n| Nunca modificar una migración ya aplicada | Rompe la historia en otros entornos |\n| Probar en staging antes de prod | Detecta problemas sin impacto real |\n| Compatibilidad hacia atrás | El deploy puede fallar; la BD no debe bloquear la app vieja |\n\n## Ejemplo\n\n```sql\n-- Migracion 001: crear tabla usuarios\n-- up.sql\nCREATE TABLE usuarios (\n  id        SERIAL PRIMARY KEY,\n  email     VARCHAR(255) NOT NULL UNIQUE,\n  nombre    VARCHAR(100) NOT NULL,\n  creado_en TIMESTAMP NOT NULL DEFAULT NOW()\n);\n\n-- down.sql (rollback)\nDROP TABLE IF EXISTS usuarios;\n\n-- Migracion 002: agregar columna pais (con valor por defecto para no romper filas existentes)\n-- up.sql\nALTER TABLE usuarios\nADD COLUMN pais CHAR(2) NOT NULL DEFAULT 'AR';\n\n-- down.sql\nALTER TABLE usuarios DROP COLUMN pais;\n```\n\n💡 **En la entrevista:** agregar una columna NOT NULL sin DEFAULT en una tabla con datos falla en producción. Primero agregá la columna con DEFAULT (migración compatible), llenala con datos, y recién entonces agregá el NOT NULL en una segunda migración. Este patrón se llama expand-contract.",
+      "cards": [
+        {
+          "id": "db-migraciones-1",
+          "front": "¿Qué es una migración de base de datos?",
+          "back": "Un archivo versionado que describe un cambio de esquema (crear tabla, agregar columna, etc.). Se aplica en orden para reproducir el mismo esquema en cualquier entorno.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-migraciones-2",
+          "front": "¿Por qué nunca debés modificar una migración ya aplicada?",
+          "back": "Rompe la historia: otros entornos ya aplicaron la versión original y no pueden detectar el cambio. Siempre creá una nueva migración.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-migraciones-3",
+          "front": "¿Qué es el patrón expand-contract en migraciones?",
+          "back": "Agregar columna con DEFAULT → backfill de datos → agregar NOT NULL. Evita que la migración falle en tablas con datos existentes.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-migraciones-4",
+          "front": "¿Por qué es importante que cada migración sea reversible?",
+          "back": "Si el deploy falla, podés hacer rollback de la BD al estado anterior. Sin down migration, un error de deploy puede dejarte sin salida.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-migraciones-5",
+          "front": "¿Qué herramientas populares gestionan migraciones SQL?",
+          "back": "Flyway y Liquibase (agnósticas). Para frameworks: Alembic (Python), Django migrations, ActiveRecord (Rails).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "db-migraciones-6",
+          "front": "¿Qué es compatibilidad hacia atrás en migraciones?",
+          "back": "La BD migrada debe seguir funcionando con la versión anterior del código. Importante porque en un deploy con zero-downtime, ambas versiones corren en paralelo.",
+          "added": "2026-06-09"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,409 @@
+{
+  "lessons": [
+    {
+      "id": "sd-scalability",
+      "level": "jr",
+      "area": "system-design",
+      "title": "Escalabilidad: horizontal vs vertical",
+      "summary": "Crecer sumando máquinas o agrandando una.",
+      "added": "2026-06-09",
+      "body": "**Escalar** un sistema significa aumentar su capacidad para manejar más carga. Hay dos estrategias fundamentales que aparecen en toda entrevista de system design.\n\n**Escalado vertical** (scale up): agregás más recursos a la misma máquina — más CPU, más RAM, disco más rápido. Es simple porque no cambia la arquitectura, pero tiene un techo físico y es costoso. Si esa máquina se cae, se cae todo.\n\n**Escalado horizontal** (scale out): agregás más máquinas al pool. Es la base de los sistemas distribuidos modernos: no hay techo teórico, tolerás fallos de nodos individuales y podés escalar y desescalar en tiempo real. La complejidad extra es que el estado compartido (sesiones, cache, DB) se vuelve un problema de diseño.\n\n```mermaid\nflowchart TB\n  subgraph vertical[Vertical - una maquina grande]\n    v[Servidor 32 cores 128GB RAM]\n  end\n  subgraph horizontal[Horizontal - muchas maquinas]\n    lb[Load Balancer] --> s1[Servidor 1]\n    lb --> s2[Servidor 2]\n    lb --> s3[Servidor 3]\n  end\n```\n\n## Ejemplo\n\nUna startup arranca con un servidor EC2 mediano (vertical). Con el crecimiento, llega al techo de RAM y migra a horizontal: pone un load balancer y agrega instancias según demanda con auto-scaling. El desafío nuevo es que las sesiones de usuario no pueden vivir en memoria local de cada instancia — las mueve a Redis compartido.\n\n💡 **En la entrevista:** si preguntan cómo escalás, mencioná vertical como primera solución rápida y horizontal como solución duradera. Después señalá el problema de estado compartido que introduce el horizontal.",
+      "cards": [
+        {
+          "id": "sd-scalability-1",
+          "front": "¿Qué es escalado vertical?",
+          "back": "Agregar más recursos (CPU, RAM) a la misma máquina. Simple pero tiene techo físico y es un único punto de falla.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-scalability-2",
+          "front": "¿Qué es escalado horizontal?",
+          "back": "Agregar más máquinas al pool. Sin techo teórico, tolerante a fallos, base de los sistemas distribuidos modernos.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-scalability-3",
+          "front": "¿Cuál es la principal complejidad que introduce el escalado horizontal?",
+          "back": "El estado compartido: sesiones, cache y bases de datos no pueden vivir en memoria local de cada instancia.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-scalability-4",
+          "front": "¿Por qué el escalado vertical tiene un límite que el horizontal no tiene?",
+          "back": "Vertical está limitado por el hardware máximo disponible. Horizontal puede agregar nodos casi indefinidamente.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-scalability-5",
+          "front": "En una startup que migra de vertical a horizontal, ¿qué problema aparece con las sesiones de usuario?",
+          "back": "Las sesiones en memoria local de un servidor no son accesibles desde otros servidores. Deben moverse a un store externo compartido como Redis.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "sd-load-balancing",
+      "level": "jr",
+      "area": "system-design",
+      "title": "Load balancing",
+      "summary": "Distribuir tráfico entre servidores sin colapsar.",
+      "added": "2026-06-09",
+      "body": "Un **load balancer** es el componente que recibe todo el tráfico entrante y lo distribuye entre múltiples servidores backend. Sin él, el escalado horizontal no sirve de nada — los clientes no saben a qué IP conectarse.\n\nLos **algoritmos de distribución** más comunes son tres. **Round robin**: cada pedido va al siguiente servidor en la lista, en rotación. Simple y efectivo cuando todos los servidores son equivalentes. **Least connections**: el pedido va al servidor con menos conexiones activas en ese momento. Mejor cuando los pedidos tienen duración variable. **IP hash**: la IP del cliente determina siempre el mismo servidor (sticky sessions). Útil cuando necesitás afinidad, pero complica el escalado.\n\nIgualmente importante: los **health checks**. El load balancer hace pings periódicos a cada backend; si uno no responde, lo saca del pool y deja de mandarle tráfico. Cuando vuelve, lo reincorpora. Esto es la base de la alta disponibilidad.\n\n```mermaid\nflowchart LR\n  cliente[Cliente] --> lb[Load Balancer]\n  lb --> app1[App Server 1]\n  lb --> app2[App Server 2]\n  lb --> app3[App Server 3]\n  app1 --> db[(Base de datos)]\n  app2 --> db\n  app3 --> db\n```\n\n## Ejemplo\n\nTenés 3 servidores con round robin. El servidor 2 se cae. El health check detecta que no responde en 3 intentos y lo marca como unhealthy. Los pedidos ahora se reparten solo entre servidor 1 y 3, sin que el cliente note nada. Cuando el servidor 2 se recupera, vuelve al pool automáticamente.\n\n💡 **En la entrevista:** mencioná que el load balancer en sí puede ser un punto único de falla — la solución es un par activo-pasivo o DNS round robin. También aclará que Layer 4 (TCP) vs Layer 7 (HTTP) son dos niveles donde puede operar.",
+      "cards": [
+        {
+          "id": "sd-load-balancing-1",
+          "front": "¿Qué hace un load balancer?",
+          "back": "Recibe el tráfico entrante y lo distribuye entre múltiples servidores backend, habilitando el escalado horizontal.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-load-balancing-2",
+          "front": "¿Cómo funciona round robin?",
+          "back": "Cada pedido va al siguiente servidor en la lista de forma rotativa. Simple y efectivo cuando los servidores son equivalentes.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-load-balancing-3",
+          "front": "¿Cuándo es mejor least connections que round robin?",
+          "back": "Cuando los pedidos tienen duración variable: el tráfico va al servidor con menos carga activa en ese momento.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-load-balancing-4",
+          "front": "¿Qué son los health checks en un load balancer?",
+          "back": "Pings periódicos a cada backend. Si un servidor no responde, se lo saca del pool. Cuando vuelve, se lo reincorpora.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-load-balancing-5",
+          "front": "¿El load balancer puede ser un punto único de falla? ¿Cómo se resuelve?",
+          "back": "Sí. Se resuelve con un par activo-pasivo (uno toma el lugar si el otro falla) o con DNS round robin entre múltiples load balancers.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "sd-caching",
+      "level": "jr",
+      "area": "system-design",
+      "title": "Caching: estrategias básicas",
+      "summary": "Guardar resultados repetidos para no recalcular.",
+      "added": "2026-06-09",
+      "body": "**Cache** es una capa de almacenamiento rápido (generalmente en memoria) que guarda resultados costosos para servirlos sin volver a calcularlos. Reduce drásticamente la carga en la base de datos y baja la latencia de lectura.\n\nLa estrategia más común es **cache-aside** (lazy loading): el código primero busca en cache; si no está (cache miss), va a la DB, guarda el resultado en cache y lo devuelve. Simple y robusto, funciona bien con datos leídos frecuentemente. Las otras dos clásicas son **write-through** (se escribe en cache y DB al mismo tiempo, fuerte consistencia) y **write-back** (se escribe solo en cache primero, la DB se actualiza después, mayor riesgo de pérdida).\n\nDos conceptos clave de control: **TTL (Time To Live)** es el tiempo de expiración de cada entrada — pasado ese tiempo, la entrada se considera stale y se borra. Evita que la cache sirva datos muy viejos. **LRU (Least Recently Used)** es la política de desalojo más común cuando la cache está llena: se elimina la entrada que menos se usó recientemente para hacer espacio.\n\n**Invalidación** es el problema más difícil: ¿cuándo y cómo borrás una entrada cuando el dato original cambia? Las opciones son invalidar explícitamente al escribir, confiar en TTL cortos, o invalidar por evento.\n\n```mermaid\nflowchart LR\n  cliente[Cliente] --> app[Servidor App]\n  app --> cache[(Cache Redis)]\n  cache -- miss --> db[(Base de datos)]\n  cache -- hit --> app\n```\n\n## Ejemplo\n\nUn perfil de usuario se lee 10.000 veces por día pero se actualiza una vez. Con cache-aside y TTL de 5 minutos: las 10.000 lecturas van a cache (1ms) en vez de a la DB (50ms). Al actualizar el perfil, se invalida explícitamente la entrada en cache. El próximo pedido hace el miss, va a la DB y vuelve a llenar el cache.\n\n💡 **En la entrevista:** mencioná siempre los dos problemas de la cache — invalidación (stale data) y cold start (cache vacía al arrancar). Si el dato es muy crítico en consistencia, explicá por qué cache puede no ser apropiado o usás TTL muy corto.",
+      "cards": [
+        {
+          "id": "sd-caching-1",
+          "front": "¿Qué es cache-aside?",
+          "back": "El código busca primero en cache. Si no está (miss), va a la DB, guarda el resultado en cache y lo devuelve. La cache no se escribe en cada write, solo en reads.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-caching-2",
+          "front": "¿Qué es TTL en un cache?",
+          "back": "Time To Live: tiempo de expiración de una entrada. Pasado ese tiempo se considera stale y se borra automáticamente.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-caching-3",
+          "front": "¿Qué es la política LRU?",
+          "back": "Least Recently Used: cuando la cache está llena, se elimina la entrada que menos se usó recientemente para hacer espacio a nuevas entradas.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-caching-4",
+          "front": "¿Cuál es la diferencia entre write-through y write-back?",
+          "back": "Write-through escribe en cache y DB al mismo tiempo (fuerte consistencia). Write-back escribe solo en cache primero y la DB se actualiza después (riesgo de pérdida de datos).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-caching-5",
+          "front": "¿Cuál es el problema más difícil del caching?",
+          "back": "La invalidación: saber cuándo y cómo borrar una entrada cuando el dato original cambia. Las opciones son invalidar explícitamente al escribir, TTL cortos, o invalidar por evento.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-caching-6",
+          "front": "¿Qué es un cache miss y un cache hit?",
+          "back": "Hit: el dato pedido está en cache, se devuelve directo (rápido). Miss: el dato no está, hay que ir a la DB (lento). El ratio de hits es la métrica clave de efectividad.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "sd-db-replication-sharding",
+      "level": "jr",
+      "area": "system-design",
+      "title": "Bases de datos: réplicas y sharding",
+      "summary": "Copiar y partir la DB para escalar.",
+      "added": "2026-06-09",
+      "body": "Una sola base de datos se convierte en cuello de botella a medida que crece la carga. Dos técnicas complementarias resuelven esto en sentidos distintos.\n\n**Replicación** copia los datos a múltiples nodos. En el modelo más común (primary-replica), las escrituras van al nodo **primario**, que propaga los cambios a uno o más **réplicas de lectura**. Las lecturas pueden repartirse entre réplicas, multiplicando la capacidad de read sin tocar el primario. Si el primario cae, una réplica puede ser promovida. La replicación no resuelve la escala de escrituras — todos los writes siguen yendo al primario.\n\n**Sharding** parte los datos horizontalmente: cada shard es una DB independiente que tiene un subconjunto de las filas. Por ejemplo, usuarios con ID 1–1M van al shard A, ID 1M–2M al shard B. Esto escala tanto lecturas como escrituras, pero agrega complejidad: las queries que cruzan shards (joins, aggregations globales) son costosas o imposibles sin coordinación extra.\n\n```mermaid\nflowchart TB\n  app[Servidor App] --> primary[(DB Primaria - Escrituras)]\n  primary --> r1[(Replica 1 - Lecturas)]\n  primary --> r2[(Replica 2 - Lecturas)]\n  app --> r1\n  app --> r2\n  primary --> shard1[(Shard A - IDs 1 al 1M)]\n  primary --> shard2[(Shard B - IDs 1M al 2M)]\n```\n\n## Ejemplo\n\nUna red social tiene 80% de lecturas (feed, perfiles) y 20% de escrituras (posts, likes). Con replicación: 3 réplicas de lectura absorbiendo el 80% sin tocar el primario. Cuando la cantidad de usuarios crece 10x, el primario también se satura — ahí entra sharding por user_id con hash consistente para distribuir la carga de escritura.\n\n💡 **En la entrevista:** si la carga es mayoría lectura, arrancá con réplicas. Si la carga de escritura explota o los datos no entran en una máquina, ahí pensás sharding. Mencioná que sharding complica enormemente los joins y las transacciones distribuidas.",
+      "cards": [
+        {
+          "id": "sd-db-replication-sharding-1",
+          "front": "¿Qué problema resuelve la replicación de base de datos?",
+          "back": "Escala las lecturas: múltiples réplicas pueden servir reads en paralelo. También da alta disponibilidad: si el primario cae, una réplica toma su lugar.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-db-replication-sharding-2",
+          "front": "¿Qué problema NO resuelve la replicación?",
+          "back": "La escala de escrituras. Todos los writes siguen yendo al nodo primario único.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-db-replication-sharding-3",
+          "front": "¿Qué es sharding?",
+          "back": "Partir los datos horizontalmente en múltiples bases de datos independientes (shards), cada una con un subconjunto de filas. Escala tanto lecturas como escrituras.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-db-replication-sharding-4",
+          "front": "¿Cuál es la principal complejidad que introduce el sharding?",
+          "back": "Las queries que cruzan shards (joins globales, aggregations) son costosas o imposibles sin coordinación extra. Las transacciones distribuidas también se vuelven muy complejas.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-db-replication-sharding-5",
+          "front": "¿Cuándo conviene ir primero a réplicas y cuándo a sharding?",
+          "back": "Réplicas: carga mayoría lectura. Sharding: cuando la escritura o el volumen de datos desborda el primario y no puede correr en una sola máquina.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-db-replication-sharding-6",
+          "front": "¿Qué es replication lag?",
+          "back": "El retraso entre que el primario confirma una escritura y las réplicas la tienen disponible. Una lectura inmediatamente después de escribir puede devolver datos viejos (eventual consistency).",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "sd-message-queues",
+      "level": "jr",
+      "area": "system-design",
+      "title": "Colas de mensajes",
+      "summary": "Desacoplar productores de consumidores con colas.",
+      "added": "2026-06-09",
+      "body": "Una **cola de mensajes** es un buffer intermediario entre el componente que genera trabajo (productor) y el que lo procesa (consumidor). El productor pone el mensaje en la cola y sigue su camino — no espera que se procese. El consumidor lee de la cola a su propio ritmo. Esto se llama **comunicación asincrónica**.\n\nEl beneficio principal es el **desacoplamiento**: el productor no necesita saber cuántos consumidores hay ni si están disponibles en ese momento. Además, la cola actúa como **buffer de carga**: si llegan 10.000 pedidos en un segundo, no saturan el backend directamente — se encolan y se procesan ordenadamente. También habilita **retry automático**: si un consumidor falla al procesar un mensaje, la cola puede reintentarlo.\n\nHerramientas populares: **RabbitMQ** (protocolo AMQP, orientado a tareas, buen soporte de routing), **Kafka** (log distribuido de alto throughput, ideal para eventos y streaming), **SQS** (managed de AWS, simple y muy escalable).\n\n```mermaid\nflowchart LR\n  api[API - Productor] --> queue[(Cola de mensajes)]\n  queue --> worker1[Worker 1]\n  queue --> worker2[Worker 2]\n  queue --> worker3[Worker 3]\n  worker1 --> db[(Base de datos)]\n  worker2 --> db\n  worker3 --> db\n```\n\n## Ejemplo\n\nUn e-commerce recibe una orden. El endpoint de checkout no procesa el pago, envío y email de confirmación de forma sincrónica — encola un mensaje `orden_creada` con el ID de la orden. Tres workers independientes consumen de esa cola: uno procesa el pago, uno notifica al depósito, uno envía el email. Si el worker de email falla, la cola reintenta sin afectar los otros dos.\n\n💡 **En la entrevista:** las colas son la respuesta a \"¿cómo manejás un spike de tráfico?\" y a \"¿qué pasa si un servicio downstream está caído?\". Mencioná que introducen eventual consistency — el resultado no es inmediato para el usuario.",
+      "cards": [
+        {
+          "id": "sd-message-queues-1",
+          "front": "¿Qué es una cola de mensajes?",
+          "back": "Un buffer intermediario entre productor (genera trabajo) y consumidor (lo procesa). El productor encola y sigue sin esperar. Comunicación asincrónica.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-message-queues-2",
+          "front": "¿Qué beneficios da una cola de mensajes?",
+          "back": "Desacoplamiento (productor no depende del consumidor), buffer de carga (absorbe spikes), retry automático si el consumidor falla.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-message-queues-3",
+          "front": "¿Cuál es el trade-off principal de usar colas?",
+          "back": "Introduce eventual consistency: el resultado no es inmediato para el usuario. El procesamiento ocurre de forma diferida.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-message-queues-4",
+          "front": "¿Cuándo usarías una cola en lugar de una llamada HTTP directa?",
+          "back": "Cuando el procesamiento puede ser diferido, cuando hay riesgo de que el servicio destino esté caído, o cuando necesitás absorber spikes de carga sin saturar el backend.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-message-queues-5",
+          "front": "¿En qué se diferencia Kafka de RabbitMQ?",
+          "back": "Kafka es un log distribuido de alto throughput, pensado para eventos y streaming, los mensajes persisten y se pueden releer. RabbitMQ está orientado a tareas con routing complejo, los mensajes se borran al confirmar.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "sd-microservices-monolith",
+      "level": "jr",
+      "area": "system-design",
+      "title": "Microservicios vs monolito",
+      "summary": "Un sistema grande o muchos servicios chicos.",
+      "added": "2026-06-09",
+      "body": "Un **monolito** es una aplicación donde toda la funcionalidad vive en un mismo proceso y se despliega junta. Un **microservicio** es un servicio pequeño e independiente que hace una sola cosa bien, se despliega por separado y se comunica con otros servicios vía HTTP o mensajes.\n\nEl monolito tiene ventajas reales que se suelen ignorar: **deploy simple**, **debugging directo** (un solo log, un stack trace), **tests integrados fáciles**, **sin latencia de red entre componentes**. Es la arquitectura correcta para la mayoría de los proyectos en etapas tempranas. Su problema es que a medida que crece, el código se acopla, los deploys se vuelven riesgosos y equipos grandes se pisan entre sí.\n\nLos microservicios resuelven esos problemas a cambio de complejidad operacional: cada servicio se despliega, escala y evoluciona independientemente. Los fallos están aislados. Pero aparecen problemas nuevos: **latencia de red entre servicios**, **consistencia distribuida**, **tracing distribuido**, **orquestación** (Kubernetes, etc.) y más infraestructura para mantener.\n\n```mermaid\nflowchart TB\n  subgraph monolito[Monolito]\n    m[App: auth - catalog - orders - payments]\n  end\n  subgraph micro[Microservicios]\n    gw[API Gateway] --> svc_auth[Auth Service]\n    gw --> svc_cat[Catalog Service]\n    gw --> svc_ord[Orders Service]\n    svc_ord --> svc_pay[Payments Service]\n  end\n```\n\n## Ejemplo\n\nUna startup arranca con monolito: deploy en 10 minutos, un equipo de 5. A los 2 años tiene 50 ingenieros y 3 equipos — el módulo de pagos no puede desplegarse sin freezar el de catálogo. Ahí tiene sentido extraer microservicios por **dominio de negocio** claro (pagos, catálogo, usuarios), no por conveniencia técnica.\n\n💡 **En la entrevista:** la respuesta correcta casi siempre es \"arrancá con monolito modular y extraé microservicios cuando tenés equipos independientes y límites de dominio claros\". No mencionés microservicios como si fueran obviamente mejores — evaluá los trade-offs.",
+      "cards": [
+        {
+          "id": "sd-microservices-monolith-1",
+          "front": "¿Cuáles son las ventajas del monolito?",
+          "back": "Deploy simple, debugging directo (un log, un stack trace), tests integrados fáciles, sin latencia de red entre componentes. Ideal para equipos pequeños y etapas tempranas.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-microservices-monolith-2",
+          "front": "¿Cuáles son las ventajas de los microservicios?",
+          "back": "Deploy, escalado y evolución independiente por servicio. Fallos aislados. Equipos pueden trabajar en paralelo sin pisarse.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-microservices-monolith-3",
+          "front": "¿Qué complejidades nuevas introducen los microservicios?",
+          "back": "Latencia de red entre servicios, consistencia distribuida, tracing distribuido, orquestación (Kubernetes), y más infraestructura para operar.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-microservices-monolith-4",
+          "front": "¿Cuándo tiene sentido migrar de monolito a microservicios?",
+          "back": "Cuando hay equipos independientes que se pisan en el mismo código, y cuando hay límites de dominio de negocio claros para dividir. No hacerlo antes.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-microservices-monolith-5",
+          "front": "¿Cómo se comunican los microservicios entre sí?",
+          "back": "Sincrónico: HTTP/REST o gRPC. Asincrónico: colas de mensajes (Kafka, RabbitMQ). Sincrónico es más simple pero crea acoplamiento temporal; asincrónico desacopla pero complica el flujo.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "sd-rest-api-design",
+      "level": "jr",
+      "area": "system-design",
+      "title": "Diseño de APIs REST",
+      "summary": "Endpoints, errores, paginación e idempotencia.",
+      "added": "2026-06-09",
+      "body": "**REST** (Representational State Transfer) es el estilo arquitectónico dominante para APIs web. Una API REST bien diseñada es predecible, consistente y fácil de usar sin leer toda la documentación.\n\nLos **recursos** son sustantivos en plural: `/users`, `/orders`, `/products`. Las acciones las definen los **verbos HTTP**: `GET` (leer), `POST` (crear), `PUT`/`PATCH` (actualizar), `DELETE` (borrar). Los **códigos de estado** son parte del contrato: `200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `404 Not Found`, `500 Internal Server Error`. Nunca devolver `200 OK` con `{\"error\": ...}` en el body.\n\n**Paginación**: nunca devolvés toda la colección de golpe. La forma más simple es offset/limit (`?limit=20&offset=40`), fácil de implementar pero ineficiente para páginas muy avanzadas. Cursor-based (`?after=abc123`) escala mejor y evita duplicados cuando la data cambia.\n\n**Idempotencia**: una operación es idempotente si repetirla N veces tiene el mismo efecto que hacerla una sola vez. `GET`, `PUT` y `DELETE` deben ser idempotentes. `POST` no lo es por definición — si querés hacer un POST idempotente (ej: procesar un pago), usás una **idempotency key** en el header que el servidor usa para detectar duplicados.\n\n```mermaid\nflowchart LR\n  cliente[Cliente] --> gw[API Gateway]\n  gw --> auth[Auth - Valida JWT]\n  auth --> handler[Request Handler]\n  handler --> cache[(Cache)]\n  handler --> db[(Base de datos)]\n  handler --> resp[Response - JSON]\n```\n\n## Ejemplo\n\n```\nGET  /users/42/orders?limit=10&after=ord_xyz\n-> 200 { data: [...], next_cursor: 'ord_abc' }\n\nPOST /payments\nHeaders: Idempotency-Key: pago-unico-123\n-> 201 { id: 'pay_999', status: 'created' }\n\nPOST /payments  (mismo header, retry)\n-> 200 { id: 'pay_999', status: 'created' }  // mismo resultado, no duplica\n```\n\n💡 **En la entrevista:** si preguntan cómo diseñarías una API, siempre mencioná recursos como sustantivos, verbos HTTP correctos, códigos de estado, paginación y manejo de errores consistente. La idempotencia aparece mucho en preguntas de pagos o creación de recursos.",
+      "cards": [
+        {
+          "id": "sd-rest-api-design-1",
+          "front": "¿Cómo se nombran los recursos en una API REST?",
+          "back": "Sustantivos en plural: /users, /orders, /products. Las acciones las define el verbo HTTP (GET, POST, PUT, DELETE), no la URL.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-rest-api-design-2",
+          "front": "¿Qué códigos HTTP corresponden a: creado exitoso, no encontrado, error del cliente, error del servidor?",
+          "back": "201 Created, 404 Not Found, 400 Bad Request, 500 Internal Server Error.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-rest-api-design-3",
+          "front": "¿Qué es una operación idempotente?",
+          "back": "Una que repetida N veces tiene el mismo efecto que hacerla una vez. GET, PUT y DELETE deben ser idempotentes. POST no lo es por definición.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-rest-api-design-4",
+          "front": "¿Cómo hacés un POST idempotente?",
+          "back": "Con una Idempotency-Key en el header. El servidor guarda esa clave y si recibe la misma request duplicada, devuelve el resultado original sin ejecutar de nuevo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-rest-api-design-5",
+          "front": "¿Cuál es la diferencia entre paginación offset/limit y cursor-based?",
+          "back": "Offset/limit es simple pero ineficiente en páginas avanzadas y puede duplicar/saltear items si el dato cambia. Cursor-based escala mejor y es estable aunque la colección cambie.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-rest-api-design-6",
+          "front": "¿Por qué no devolver 200 OK con un error en el body?",
+          "back": "Rompe el contrato REST. Los clientes (y herramientas de monitoreo) usan el status code para saber si algo falló. Un 200 con error oculta el fallo y complica el debugging.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "sd-url-shortener",
+      "level": "jr",
+      "area": "system-design",
+      "title": "Ejercicio: diseño de URL shortener",
+      "summary": "Diseñar bit.ly desde cero, paso a paso.",
+      "added": "2026-06-09",
+      "body": "El URL shortener es el ejercicio de system design más clásico para nivel junior. Toca escalabilidad, DB, cache y diseño de API en un problema pequeño y acotado.\n\n**Requerimientos**: dado una URL larga, generar un código corto (ej: `bit.ly/abc123`). Al acceder al código corto, redirigir al usuario a la URL original. Los números típicos de entrevista: 100M URLs creadas, 1B redirects por día (ratio 10:1 lectura pesada).\n\n**Generación del código**: dos enfoques. (1) **Base62 + ID autoincremental**: cada URL nueva recibe un ID entero del DB, se convierte a base62 `[0-9a-zA-Z]`. Con 7 caracteres tenés 62^7 ≈ 3.500 billones de combinaciones. (2) **Hash + truncate**: aplicar MD5/SHA256 a la URL y tomar los primeros 7 caracteres. Más simple pero requiere manejo de colisiones.\n\n**Redirect**: el servidor busca el código en cache primero (Redis), si no está va a DB, y devuelve `301 Moved Permanently` (se cachea en browser) o `302 Found` (tráfico siempre pasa por el servidor, útil para analytics).\n\n```mermaid\nflowchart LR\n  usuario[Usuario] --> lb[Load Balancer]\n  lb --> app[App Server]\n  app --> cache[(Cache Redis - hot URLs)]\n  cache -- miss --> db[(DB - url_map)]\n  app --> resp[HTTP 302 Location: URL larga]\n```\n\n## Razonamiento de escala\n\nCon 1B redirects por día: ~11.600 req/s promedio, ~50.000 req/s en pico. El DB de escritura solo recibe 100M/día (~1.200 req/s), manejable. Las lecturas son el desafío: con cache Redis y hot URLs (20% de URLs generan 80% del tráfico), la mayoría de las 11.600 req/s se resuelven en cache sin tocar el DB.\n\n```\nTabla: urls\n  id          BIGINT   -- autoincremental\n  short_code  VARCHAR  -- base62 del id\n  long_url    TEXT\n  created_at  TIMESTAMP\n  user_id     BIGINT   -- nullable\n```\n\n💡 **En la entrevista:** empezá con los números, justificá la elección 301 vs 302 según si necesitás analytics, explicá por qué cache es la clave del diseño (lectura pesada), y mencioná que el DB de URLs es write-once (nunca se actualiza), lo que simplifica mucho la invalidación de cache.",
+      "cards": [
+        {
+          "id": "sd-url-shortener-1",
+          "front": "¿Cuál es el ratio típico lectura/escritura de un URL shortener?",
+          "back": "10:1 aproximadamente. Muchos más redirects que creaciones. Esto lo define como un sistema de lectura pesada y justifica usar cache agresivo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-url-shortener-2",
+          "front": "¿Cómo funciona la generación de código con Base62?",
+          "back": "Cada URL recibe un ID entero autoincremental de la DB, que se convierte a base62 [0-9a-zA-Z]. Con 7 caracteres tenés ~3.500 billones de combinaciones posibles.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-url-shortener-3",
+          "front": "¿Diferencia entre HTTP 301 y 302 en el contexto de URL shortener?",
+          "back": "301 Moved Permanently: el browser cachea el redirect, futuras visitas no pasan por el servidor (menos carga, sin analytics). 302 Found: cada visita pasa por el servidor (analytics completos, más carga).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-url-shortener-4",
+          "front": "¿Por qué el URL shortener es fácil de cachear?",
+          "back": "Las URLs son write-once: nunca se modifican después de creadas. No hay problema de invalidación — el cache nunca queda stale mientras la URL exista.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-url-shortener-5",
+          "front": "¿Qué columnas mínimas necesita la tabla de URLs?",
+          "back": "id (BIGINT autoincremental), short_code (VARCHAR, base62 del id), long_url (TEXT), created_at (TIMESTAMP). Opcionalmente user_id para URLs de usuarios registrados.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-url-shortener-6",
+          "front": "¿Cómo optimizás el URL shortener para 50.000 req/s en pico?",
+          "back": "Cache Redis con hot URLs (20% de URLs generan 80% del tráfico). Réplicas de lectura para misses de cache. Load balancer delante de múltiples app servers stateless.",
+          "added": "2026-06-09"
+        }
+      ]
+    },
+    {
+      "id": "sd-cap-theorem",
+      "level": "jr",
+      "area": "system-design",
+      "title": "Teorema CAP",
+      "summary": "Solo dos de tres: consistencia, disponibilidad, partición.",
+      "added": "2026-06-09",
+      "body": "El **teorema CAP** (Brewer, 2000) establece que en un sistema distribuido solo podés garantizar **dos de estas tres propiedades al mismo tiempo**:\n\n- **Consistency (C)**: todos los nodos ven los mismos datos al mismo tiempo. Cualquier lectura devuelve el dato más reciente.\n- **Availability (A)**: el sistema siempre responde a las requests, aunque no sea con el dato más reciente.\n- **Partition Tolerance (P)**: el sistema sigue funcionando aunque haya una falla de red que divida los nodos en grupos que no pueden comunicarse (partición de red).\n\nLa clave práctica: **las particiones de red ocurren**. No son opcionales en un sistema distribuido real. Por lo tanto, siempre vas a necesitar P. La elección real es entre **CP** (sacrificás disponibilidad cuando hay partición) o **AP** (sacrificás consistencia cuando hay partición).\n\n**CP** (ej: HBase, Zookeeper, sistemas bancarios): si hay partición, el sistema deja de responder o devuelve error hasta sincronizarse. Nunca da datos incorrectos. **AP** (ej: DynamoDB, Cassandra, DNS): si hay partición, el sistema sigue respondiendo con datos que pueden estar desactualizados. Eventual consistency.\n\n```mermaid\nflowchart TB\n  cap[Teorema CAP] --> c[Consistency - mismo dato en todos los nodos]\n  cap --> a[Availability - siempre responde]\n  cap --> p[Partition Tolerance - sobrevive fallas de red]\n  p --> decision[Particion ocurre siempre - elegis CP o AP]\n  decision --> cp[CP - banco / coordinar nodos]\n  decision --> ap[AP - red social / DNS / cache]\n```\n\n## Ejemplo\n\nUn banco procesa transferencias: si hay una partición de red entre datacenters, **prefiere dejar de aceptar transacciones** (sacrifica disponibilidad) antes que procesar una transferencia con datos inconsistentes sobre el saldo. Es CP.\n\nUn feed de Twitter: si hay partición, **prefiere mostrar tweets que pueden tener unos segundos de delay** antes que dar error. Es AP. El usuario tolera ver un tweet unos segundos tarde, no tolera que la app esté caída.\n\n💡 **En la entrevista:** CAP aparece siempre que diseñás algo con múltiples nodos. La respuesta que buscan no es memorizar la definición sino poder decir: 'para este caso necesito CP porque los datos financieros no pueden ser inconsistentes' o 'puedo sacrificar consistencia fuerte por disponibilidad y usar eventual consistency'.",
+      "cards": [
+        {
+          "id": "sd-cap-theorem-1",
+          "front": "¿Qué dice el teorema CAP?",
+          "back": "En un sistema distribuido solo podés garantizar dos de estas tres propiedades: Consistency (mismo dato en todos), Availability (siempre responde), Partition Tolerance (sobrevive fallas de red).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-cap-theorem-2",
+          "front": "¿Por qué en la práctica la elección real es CP vs AP?",
+          "back": "Las particiones de red ocurren siempre en sistemas distribuidos reales. Partition Tolerance no es opcional. La elección real es sacrificar consistencia (AP) o disponibilidad (CP) cuando hay una partición.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-cap-theorem-3",
+          "front": "¿Qué hace un sistema CP cuando ocurre una partición de red?",
+          "back": "Deja de responder o devuelve error hasta que los nodos puedan sincronizarse. Nunca devuelve datos inconsistentes. Ejemplo: sistemas bancarios, ZooKeeper.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-cap-theorem-4",
+          "front": "¿Qué hace un sistema AP cuando ocurre una partición de red?",
+          "back": "Sigue respondiendo con datos que pueden estar desactualizados (eventual consistency). Ejemplo: DynamoDB, Cassandra, DNS, feeds de redes sociales.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-cap-theorem-5",
+          "front": "¿Qué es eventual consistency?",
+          "back": "Garantía de que si dejás de escribir, eventualmente todos los nodos convergerán al mismo valor. Los datos pueden estar desactualizados por un período, pero no para siempre.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-cap-theorem-6",
+          "front": "¿Cuándo elegís CP y cuándo AP para un sistema nuevo?",
+          "back": "CP: datos financieros, transacciones, coordinación de nodos — la inconsistencia es inaceptable. AP: feeds, analytics, DNS, cache — el usuario tolera datos levemente desactualizados.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-cap-theorem-7",
+          "front": "¿Por qué CAP es una simplificación y PACELC la extiende?",
+          "back": "CAP solo habla de particiones. PACELC agrega: incluso sin partición, hay trade-off entre latencia (L) y consistencia (C). Sistemas como DynamoDB permiten configurar ese trade-off.",
+          "added": "2026-06-09"
+        }
+      ]
+    }
+  ]
+}
