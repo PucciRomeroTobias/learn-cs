@@ -237,6 +237,10 @@ const isNew = (added, seen) => added > seen;
 
 function Aprender({ level, setLevel, completed, seen, onOpen }) {
   const lessons = content.lessons.filter((l) => l.level === level);
+  const areas = content.areas.filter((a) => lessons.some((l) => l.area === a.id));
+  const [openArea, setOpenArea] = useState(null);
+  useEffect(() => { setOpenArea(null); }, [level]); // al cambiar de nivel, todo cerrado
+
   return (
     <>
       <div className="chips">
@@ -246,24 +250,40 @@ function Aprender({ level, setLevel, completed, seen, onOpen }) {
           </button>
         ))}
       </div>
-      <div className="feed">
-        {content.areas.map((area) => {
+
+      <div className="accordion">
+        {areas.map((area) => {
           const ls = lessons.filter((l) => l.area === area.id);
-          if (!ls.length) return null;
           const done = ls.filter((l) => completed[l.id]).length;
+          const open = openArea === area.id;
+          const pct = ls.length ? (done / ls.length) * 100 : 0;
+          const hasNew = ls.some((l) => isNew(l.added, seen) && !completed[l.id]);
           return (
-            <section key={area.id}>
-              <h2>{area.icon} {area.label}<span className="tier-count">{done}/{ls.length}</span></h2>
-              {ls.map((l) => (
-                <button key={l.id} className={"card-row" + (completed[l.id] ? " done" : "")} onClick={() => onOpen(l.id)}>
-                  <div className="card-main">
-                    <div className="card-title">{completed[l.id] ? "✓ " : ""}{l.title}</div>
-                    <div className="card-sum">{l.summary}</div>
-                  </div>
-                  {isNew(l.added, seen) && !completed[l.id] ? <span className="new">NUEVO</span> : null}
-                </button>
-              ))}
-            </section>
+            <div key={area.id} className={"acc" + (open ? " open" : "")}>
+              <button className="acc-head" onClick={() => setOpenArea(open ? null : area.id)}>
+                <span className="acc-icon">{area.icon}</span>
+                <span className="acc-info">
+                  <span className="acc-title">{area.label}</span>
+                  <span className="acc-bar"><span style={{ width: `${pct}%` }} /></span>
+                </span>
+                {hasNew && !open ? <span className="new">NUEVO</span> : null}
+                <span className="acc-count">{done}/{ls.length}</span>
+                <span className="acc-chevron">{open ? "▾" : "▸"}</span>
+              </button>
+              {open && (
+                <div className="acc-body">
+                  {ls.map((l) => (
+                    <button key={l.id} className={"card-row" + (completed[l.id] ? " done" : "")} onClick={() => onOpen(l.id)}>
+                      <div className="card-main">
+                        <div className="card-title">{completed[l.id] ? "✓ " : ""}{l.title}</div>
+                        <div className="card-sum">{l.summary}</div>
+                      </div>
+                      {isNew(l.added, seen) && !completed[l.id] ? <span className="new">NUEVO</span> : null}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
         {lessons.length === 0 && <p className="empty">Todavía no hay contenido para este nivel. ✦</p>}

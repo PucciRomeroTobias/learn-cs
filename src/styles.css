@@ -83,15 +83,23 @@ main { padding: 20px 20px calc(var(--nav-h) + env(safe-area-inset-bottom) + 28px
 }
 .chip.on { background: var(--accent); border-color: var(--accent); color: #1a1408; font-weight: 700; }
 
-/* ---------- feed ---------- */
-.feed section { margin-bottom: 26px; }
-.feed h2 {
-  display: flex; align-items: center; gap: 8px;
-  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
-  letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint);
-  margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+/* ---------- accordion de areas ---------- */
+.accordion { display: flex; flex-direction: column; gap: 10px; }
+.acc { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; transition: border-color 0.2s; }
+.acc.open { border-color: var(--faint); }
+.acc-head {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 15px 16px; background: none; border: none; text-align: left;
 }
-.feed h2 .tier-count { margin-left: auto; letter-spacing: 0; color: var(--muted); }
+.acc.open .acc-head { border-bottom: 1px solid var(--border); }
+.acc-icon { font-size: 20px; flex-shrink: 0; }
+.acc-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.acc-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.acc-bar { height: 4px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.acc-bar > span { display: block; height: 100%; background: linear-gradient(90deg, #c98f2e, var(--accent)); border-radius: 999px; transition: width 0.4s; }
+.acc-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.acc-chevron { color: var(--faint); font-size: 11px; flex-shrink: 0; width: 12px; text-align: center; }
+.acc-body { padding: 12px 12px 4px; animation: rise 0.3s both; }
 
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .card-row {
@@ -106,12 +114,12 @@ main { padding: 20px 20px calc(var(--nav-h) + env(safe-area-inset-bottom) + 28px
 .card-row:hover { border-color: var(--faint); }
 .card-row.done { background: var(--bg-2); }
 .card-row.done .card-title { color: var(--muted); }
-.feed section .card-row:nth-child(2) { animation-delay: 0.04s; }
-.feed section .card-row:nth-child(3) { animation-delay: 0.08s; }
-.feed section .card-row:nth-child(4) { animation-delay: 0.12s; }
-.feed section .card-row:nth-child(5) { animation-delay: 0.16s; }
-.feed section .card-row:nth-child(6) { animation-delay: 0.20s; }
-.feed section .card-row:nth-child(n+7) { animation-delay: 0.24s; }
+.acc-body .card-row:nth-child(2) { animation-delay: 0.03s; }
+.acc-body .card-row:nth-child(3) { animation-delay: 0.06s; }
+.acc-body .card-row:nth-child(4) { animation-delay: 0.09s; }
+.acc-body .card-row:nth-child(5) { animation-delay: 0.12s; }
+.acc-body .card-row:nth-child(6) { animation-delay: 0.15s; }
+.acc-body .card-row:nth-child(n+7) { animation-delay: 0.18s; }
 .card-main { flex: 1; min-width: 0; }
 .card-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
 .card-sum { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
