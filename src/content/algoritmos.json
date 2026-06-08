@@ -1,0 +1,19 @@
+{
+  "lessons": [
+    {
+      "id": "bigo-intro",
+      "level": "jr",
+      "area": "algoritmos",
+      "title": "Complejidad: notación Big-O",
+      "summary": "Cómo crece el costo cuando crece la entrada.",
+      "added": "2026-06-09",
+      "body": "**Big-O** describe cómo crece el costo (tiempo o memoria) a medida que crece el tamaño de la entrada `n`. No mide segundos: mide **cómo escala**. Ignora constantes y términos menores — `3n + 50` es **O(n)**, porque cuando `n` se hace grande solo importa el término dominante.\n\nDe mejor a peor:\n\n```mermaid\nflowchart LR\n  a[O de 1] --> b[O de log n] --> c[O de n] --> d[O de n log n] --> e[O de n al cuadrado] --> f[O de 2 a la n]\n```\n\n| Clase | Nombre | Ejemplo típico |\n|---|---|---|\n| O(1) | constante | acceso a array por índice |\n| O(log n) | logarítmica | búsqueda binaria |\n| O(n) | lineal | recorrer la entrada una vez |\n| O(n log n) | linearítmica | merge sort, quicksort |\n| O(n²) | cuadrática | dos loops anidados |\n| O(2ⁿ) | exponencial | fuerza bruta sobre subconjuntos |\n\n## Ejemplo: identificar la complejidad\n\n```python\n# O(n): un loop sobre la entrada\nfor x in datos:\n    print(x)\n\n# O(n^2): loop dentro de loop\nfor i in datos:\n    for j in datos:\n        print(i, j)\n```\n\n💡 **En la entrevista:** después de resolver, SIEMPRE te van a preguntar la complejidad en tiempo y en memoria. Tenelas listas antes de que pregunten.",
+      "cards": [
+        { "id": "bigo-intro-1", "front": "¿Qué mide Big-O?", "back": "Cómo crece el costo (tiempo o memoria) a medida que crece la entrada n. Mide cómo escala, no segundos.", "added": "2026-06-09" },
+        { "id": "bigo-intro-2", "front": "¿Por qué 3n + 50 es O(n)?", "back": "Big-O ignora constantes y términos menores; importa solo el término dominante cuando n se hace grande.", "added": "2026-06-09" },
+        { "id": "bigo-intro-3", "front": "¿Qué complejidad tiene una búsqueda binaria y por qué?", "back": "O(log n): en cada paso descarta la mitad del espacio de búsqueda.", "added": "2026-06-09" },
+        { "id": "bigo-intro-4", "front": "¿Qué complejidad suelen tener dos loops anidados sobre la entrada?", "back": "O(n²), cuadrática.", "added": "2026-06-09" }
+      ]
+    }
+  ]
+}

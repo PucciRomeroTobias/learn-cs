@@ -1,0 +1,20 @@
+{
+  "lessons": [
+    {
+      "id": "oop-polimorfismo",
+      "level": "ssr",
+      "area": "oop",
+      "title": "POO y polimorfismo",
+      "summary": "Misma interfaz, distintas implementaciones.",
+      "added": "2026-06-09",
+      "body": "La **Programación Orientada a Objetos** organiza el código en **objetos** que combinan datos (atributos) y comportamiento (métodos). Sus cuatro pilares:\n\n1. **Encapsulamiento** — esconder el estado interno detrás de una interfaz.\n2. **Abstracción** — exponer el *qué* y ocultar el *cómo*.\n3. **Herencia** — una clase reutiliza/extiende a otra.\n4. **Polimorfismo** — el que más cae en entrevistas.\n\n**Polimorfismo = \"muchas formas\":** el mismo llamado se comporta distinto según el tipo concreto del objeto.\n\n```mermaid\nflowchart TB\n  Animal[Animal - hacerSonido]\n  Animal --> Perro[Perro - devuelve Guau]\n  Animal --> Gato[Gato - devuelve Miau]\n```\n\n## Ejemplo\n\n```python\nclass Animal:\n    def hacer_sonido(self): ...\n\nclass Perro(Animal):\n    def hacer_sonido(self): return 'Guau'\n\nclass Gato(Animal):\n    def hacer_sonido(self): return 'Miau'\n\n# código que NO sabe el tipo concreto y funciona igual:\nfor a in [Perro(), Gato()]:\n    print(a.hacer_sonido())   # Guau, luego Miau\n```\n\n**La ventaja:** escribís código contra una **interfaz**, no contra implementaciones concretas. Agregar un `Vaca` nuevo no rompe el loop de arriba.\n\nDos sabores: **sobreescritura** (override de un método heredado) y, en lenguajes dinámicos, **duck typing** (no importa la clase, sino que tenga el método).\n\n💡 **En la entrevista:** polimorfismo es la clave del principio Open/Closed de SOLID — abierto a extensión (nuevos tipos), cerrado a modificación (no tocás el código que ya anda).",
+      "cards": [
+        { "id": "oop-polimorfismo-1", "front": "¿Cuáles son los 4 pilares de la POO?", "back": "Encapsulamiento, abstracción, herencia y polimorfismo.", "added": "2026-06-09" },
+        { "id": "oop-polimorfismo-2", "front": "¿Qué es polimorfismo, en una frase?", "back": "El mismo llamado se comporta distinto según el tipo concreto del objeto: misma interfaz, distintas implementaciones.", "added": "2026-06-09" },
+        { "id": "oop-polimorfismo-3", "front": "¿Cuál es la ventaja práctica del polimorfismo?", "back": "Escribís código contra una interfaz, no contra implementaciones concretas. Agregar un tipo nuevo no rompe el código existente.", "added": "2026-06-09" },
+        { "id": "oop-polimorfismo-4", "front": "¿Qué es duck typing?", "back": "En lenguajes dinámicos: no importa la clase del objeto, sino que tenga el método/comportamiento esperado.", "added": "2026-06-09" },
+        { "id": "oop-polimorfismo-5", "front": "¿Con qué principio SOLID se relaciona el polimorfismo?", "back": "Open/Closed: abierto a extensión (nuevos tipos) y cerrado a modificación (no tocás el código que ya funciona).", "added": "2026-06-09" }
+      ]
+    }
+  ]
+}

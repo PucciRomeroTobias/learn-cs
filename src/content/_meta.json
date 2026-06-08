@@ -1,0 +1,22 @@
+{
+  "version": "2026-06-09",
+  "ladder": [
+    { "id": "jr", "label": "Junior" },
+    { "id": "ssr", "label": "Semi-Senior" },
+    { "id": "sr", "label": "Senior" },
+    { "id": "lead", "label": "Tech Lead" }
+  ],
+  "areas": [
+    { "id": "fundamentos", "label": "Fundamentos de programación", "icon": "💻" },
+    { "id": "estructuras", "label": "Estructuras de datos", "icon": "🗃️" },
+    { "id": "algoritmos", "label": "Algoritmos y complejidad", "icon": "⚙️" },
+    { "id": "oop", "label": "POO y patrones de diseño", "icon": "🧩" },
+    { "id": "db", "label": "Bases de datos y SQL", "icon": "🛢️" },
+    { "id": "redes", "label": "Redes y web", "icon": "🌐" },
+    { "id": "so", "label": "Sistemas operativos y concurrencia", "icon": "🧵" },
+    { "id": "arquitectura", "label": "Arquitectura de computadoras", "icon": "🔧" },
+    { "id": "git", "label": "Control de versiones (Git)", "icon": "🔀" },
+    { "id": "testing", "label": "Testing", "icon": "✅" },
+    { "id": "system-design", "label": "System Design", "icon": "🏗️" }
+  ]
+}
