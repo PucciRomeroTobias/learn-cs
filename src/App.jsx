@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { marked } from "marked";
+import hljs from "highlight.js/lib/core";
+import python from "highlight.js/lib/languages/python";
+import sql from "highlight.js/lib/languages/sql";
+import bash from "highlight.js/lib/languages/bash";
+import javascript from "highlight.js/lib/languages/javascript";
+import http from "highlight.js/lib/languages/http";
 import meta from "./content/_meta.json";
+
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("sql", sql);
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("http", http);
 
 // Contenido = meta (ladder + areas) + lecciones de cada archivo src/content/<area>.json.
 // Agregar un área = soltar un .json con { "lessons": [...] }; no hace falta tocar código.
@@ -18,8 +30,10 @@ marked.use({
   renderer: {
     code({ text, lang }) {
       if (lang === "mermaid") return `<div class="mermaid">${text}</div>`;
-      const esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      return `<pre><code>${esc}</code></pre>`;
+      const html = lang && hljs.getLanguage(lang)
+        ? hljs.highlight(text, { language: lang, ignoreIllegals: true }).value
+        : text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      return `<pre><code class="hljs">${html}</code></pre>`;
     },
   },
 });

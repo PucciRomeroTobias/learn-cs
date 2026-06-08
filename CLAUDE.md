@@ -90,6 +90,13 @@ Reglas para encapsular fuerte:
   sed -i '' 's#https://npm.artifacts.furycloud.io/repository/all/#https://registry.npmjs.org/#g' package-lock.json
   # verificar: grep -c furycloud package-lock.json  -> 0
   ```
+- **Instalar deps localmente:** el `.npmrc` del proyecto apunta a público, que está
+  **bloqueado en la red de trabajo** → `npm install` falla. Instalar con override al
+  registry de Meli y después sed-fix el lock:
+  ```bash
+  npm install <pkg> --registry=https://npm.artifacts.furycloud.io/
+  sed -i '' 's#https://npm.artifacts.furycloud.io/repository/all/#https://registry.npmjs.org/#g' package-lock.json
+  ```
 - **Antes de cada push, chequear** `grep -c furycloud package-lock.json` == 0.
 
 ## Deploy
