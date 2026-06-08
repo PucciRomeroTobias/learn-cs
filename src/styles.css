@@ -1,0 +1,137 @@
+:root {
+  --bg: #0f1115;
+  --surface: #1a1d24;
+  --surface-2: #232730;
+  --text: #e6e8ec;
+  --muted: #9aa0ab;
+  --accent: #5b8cff;
+  --new: #ffb84d;
+  --ok: #00c389;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: env(safe-area-inset-top) 16px 32px;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 20px 0 12px;
+}
+header h1 { font-size: 22px; margin: 0; letter-spacing: -0.02em; }
+.progress { color: var(--muted); font-size: 13px; }
+
+.tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.tabs button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tabs button.on { background: var(--accent); color: #fff; }
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--accent);
+  font-size: 12px;
+}
+.tabs button.on .badge { background: rgba(255,255,255,0.25); color: #fff; }
+
+section h2 { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 20px 0 8px; }
+
+.row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  border: none;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+.new {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--new);
+  padding: 2px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.lesson .back, .empty { color: var(--muted); }
+.lesson .back { background: none; border: none; font-size: 15px; padding: 0; margin-bottom: 12px; cursor: pointer; }
+.lesson h2 { font-size: 22px; margin: 0 0 12px; }
+.body { font-size: 16px; }
+.body :is(code) { background: var(--surface-2); padding: 2px 6px; border-radius: 6px; font-size: 14px; }
+.body pre { background: var(--surface-2); padding: 12px; border-radius: 10px; overflow-x: auto; }
+.meta { color: var(--muted); font-size: 14px; margin-top: 20px; }
+.ok { color: var(--ok); font-weight: 600; }
+
+.primary {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.review { padding-top: 8px; }
+.counter { color: var(--muted); font-size: 13px; text-align: center; margin-bottom: 12px; }
+.card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 28px 20px;
+  min-height: 180px;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+.front { font-size: 19px; font-weight: 600; }
+.backside { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--surface-2); color: var(--text); font-size: 16px; }
+.empty { text-align: center; padding: 48px 16px; }
+
+.grades { display: flex; gap: 8px; }
+.grades button {
+  flex: 1;
+  padding: 14px 4px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+}
+.grades .again { background: #e0556a; }
+.grades .good { background: var(--accent); }
+.grades .easy { background: var(--ok); }
