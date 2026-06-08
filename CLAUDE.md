@@ -71,6 +71,27 @@ learn-cs/
    └─ content.json     # lecciones → tarjetas. ÚNICO archivo que se edita seguido.
 ```
 
+## Encapsulación del entorno (npm registry) — CRÍTICO
+
+La Mac de trabajo tiene `~/.npmrc` global apuntando al registry **interno de Meli**
+(`https://npm.artifacts.furycloud.io/`). Si eso se filtra al repo, **Vercel falla**
+con `403 Forbidden` (no tiene acceso al registry privado de Meli).
+
+Reglas para encapsular fuerte:
+
+- Hay un **`.npmrc` del proyecto** con `registry=https://registry.npmjs.org/`
+  (npm público). Vercel lo respeta. **No borrarlo.** (No tiene tokens → es seguro
+  commitearlo.)
+- El **`package-lock.json` no debe contener URLs de `furycloud.io`.** El npm local
+  resuelve contra furycloud aunque pongas `--registry`, y el npm público está
+  **bloqueado** desde la red de trabajo. Por eso, tras regenerar el lock, reescribir
+  las URLs a público (los hashes sha512 son del contenido, siguen válidos):
+  ```bash
+  sed -i '' 's#https://npm.artifacts.furycloud.io/repository/all/#https://registry.npmjs.org/#g' package-lock.json
+  # verificar: grep -c furycloud package-lock.json  -> 0
+  ```
+- **Antes de cada push, chequear** `grep -c furycloud package-lock.json` == 0.
+
 ## Deploy
 
 - Vercel, preset **Vite**. URL: `learn-cs-psi.vercel.app`. Deploy automático en cada
