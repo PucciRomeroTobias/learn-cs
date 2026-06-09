@@ -219,6 +219,7 @@ export default function App() {
           const nextId = idx >= 0 && idx < sibs.length - 1 ? sibs[idx + 1].id : null;
           return (
             <Lesson
+              key={l.id}
               lesson={l}
               done={!!completed[openLesson]}
               nextId={nextId}

@@ -130,7 +130,11 @@ main { padding: 20px 20px calc(var(--nav-h) + env(safe-area-inset-bottom) + 28px
 }
 
 /* ---------- lesson ---------- */
-.lesson { animation: rise 0.4s both; }
+@keyframes lessonIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+.lesson { animation: lessonIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .lesson .back {
   font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em;
   background: none; border: none; color: var(--muted); padding: 0; margin-bottom: 18px;

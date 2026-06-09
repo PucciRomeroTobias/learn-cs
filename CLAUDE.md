@@ -71,6 +71,41 @@ learn-cs/
    └─ content.json     # lecciones → tarjetas. ÚNICO archivo que se edita seguido.
 ```
 
+## Molde de contenido (para generar más áreas/niveles, ej. SSR)
+
+Cada lección vive en `src/content/<area>.json` dentro de `{ "lessons": [...] }`.
+Estructura: `{ id, level, area, title, summary (≤8 palabras), added, body, cards }`.
+
+El `body` (markdown) sigue este orden fijo:
+1. 2-4 párrafos de explicación con **negrita** en términos clave.
+2. UN diagrama ```mermaid``` — solo `flowchart TB/LR`, etiquetas SIN comillas ni
+   `< > & ( ) :` (texto simple con espacios/guiones). Cilindros `db[(Base de datos)]` ok.
+3. Sección `## Ejemplo` con bloque de código (```python/```sql/```bash/```http),
+   usando **comillas simples** (así en JSON solo hace falta `\n`).
+4. Línea final `💡 **En la entrevista:** ...`.
+Tablas markdown bienvenidas (ej. costos, status codes).
+
+`cards`: 4-9 por lección, ids `<id-leccion>-N` estables. ids de lección con prefijo
+de área (`ds-`, `algo-`, `oop-`, `db-`, `net-`, `so-`, `git-`, `test-`, `sd-`,
+`fund-`). **Nunca** renombrar ids existentes (rompe el progreso en localStorage).
+
+### Convención de inglés (IMPORTANTE)
+
+El usuario quiere los términos en inglés visibles (memoria visual + entrevistas):
+- **Títulos:** agregar el término estándar en inglés entre paréntesis cuando exista.
+  Ej: `Encapsulamiento (encapsulation)`, `Listas enlazadas (linked lists)`. Lo que ya
+  está en inglés (SOLID, TDD, REST, deadlock, rebase…) se deja tal cual.
+- **Body:** en la **primera mención** de un término técnico importante, el inglés
+  entre paréntesis. Ej: **pila (stack)**, **herencia (inheritance)**. Sin saturar.
+
+### Validación tras generar/editar contenido
+
+- `node -e "JSON.parse(...)"` por archivo (válido).
+- Sin ids duplicados ni perdidos (script de huella de ids antes/después).
+- `npm run build` verde.
+- Diagramas Mermaid se renderizan en runtime (un diagrama mal formado no rompe la
+  app: el `.catch` lo ignora), pero conviene respetar las reglas de arriba.
+
 ## Encapsulación del entorno (npm registry) — CRÍTICO
 
 La Mac de trabajo tiene `~/.npmrc` global apuntando al registry **interno de Meli**
