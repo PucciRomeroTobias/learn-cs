@@ -212,14 +212,22 @@ export default function App() {
             onOpen={setOpenLesson}
           />
         )}
-        {tab === "aprender" && openLesson && (
-          <Lesson
-            lesson={content.lessons.find((l) => l.id === openLesson)}
-            done={!!completed[openLesson]}
-            onComplete={completeLesson}
-            onBack={() => setOpenLesson(null)}
-          />
-        )}
+        {tab === "aprender" && openLesson && (() => {
+          const l = content.lessons.find((x) => x.id === openLesson);
+          const sibs = content.lessons.filter((x) => x.area === l.area && x.level === l.level);
+          const idx = sibs.findIndex((x) => x.id === openLesson);
+          const nextId = idx >= 0 && idx < sibs.length - 1 ? sibs[idx + 1].id : null;
+          return (
+            <Lesson
+              lesson={l}
+              done={!!completed[openLesson]}
+              nextId={nextId}
+              onComplete={completeLesson}
+              onNavigate={setOpenLesson}
+              onBack={() => setOpenLesson(null)}
+            />
+          );
+        })()}
         {tab === "repaso" && <Review cards={dueCards} onGrade={gradeCard} />}
         {tab === "perfil" && (
           <Perfil
@@ -306,9 +314,11 @@ function Aprender({ level, setLevel, completed, seen, onOpen }) {
   );
 }
 
-function Lesson({ lesson, done, onComplete, onBack }) {
+function Lesson({ lesson, done, nextId, onComplete, onNavigate, onBack }) {
   const bodyRef = useRef(null);
+  const goNext = () => (nextId ? onNavigate(nextId) : onBack());
   useEffect(() => {
+    window.scrollTo({ top: 0 });
     let cancelled = false;
     const nodes = bodyRef.current?.querySelectorAll(".mermaid");
     if (!nodes?.length) return;
@@ -342,12 +352,15 @@ function Lesson({ lesson, done, onComplete, onBack }) {
       <h1>{lesson.title}</h1>
       <div className="body" ref={bodyRef} dangerouslySetInnerHTML={{ __html: marked.parse(lesson.body) }} />
       {done ? (
-        <p className="ok">✓ Aprendida — sus {lesson.cards.length} tarjetas están en el Repaso.</p>
+        <>
+          <p className="ok">✓ Aprendida — sus {lesson.cards.length} tarjetas están en el Repaso.</p>
+          {nextId ? <button className="primary" onClick={goNext}>Siguiente lección →</button> : null}
+        </>
       ) : (
         <>
           <p className="meta">{lesson.cards.length} tarjetas se suman al Repaso al aprenderla.</p>
-          <button className="primary" onClick={() => { onComplete(lesson.id); onBack(); }}>
-            Marcar como aprendida
+          <button className="primary" onClick={() => { onComplete(lesson.id); goNext(); }}>
+            {nextId ? "Aprendida → siguiente" : "Marcar como aprendida"}
           </button>
         </>
       )}
@@ -368,7 +381,7 @@ function Review({ cards, onGrade }) {
   return (
     <div className="review">
       <div className="counter">{Math.min(i + 1, cards.length)} / {cards.length}</div>
-      <div className={"flashcard" + (show ? " flipped" : "")} onClick={() => setShow(true)}>
+      <div className={"flashcard" + (show ? " flipped" : "")} onClick={() => setShow((s) => !s)}>
         <div className="fc-inner">
           <div className="fc-face fc-front">{card.front}</div>
           <div className="fc-face fc-back"><div className="tag">Respuesta</div>{card.back}</div>
