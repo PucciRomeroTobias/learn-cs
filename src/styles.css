@@ -194,7 +194,18 @@ main { padding: 20px 20px calc(var(--nav-h) + env(safe-area-inset-bottom) + 28px
 
 /* ---------- review / flashcard flip ---------- */
 .review { padding-top: 6px; }
-.counter { font-family: var(--font-mono); color: var(--faint); font-size: 12px; letter-spacing: 0.1em; text-align: center; margin-bottom: 18px; }
+.review-filters .chips { margin-bottom: 10px; }
+.review-filters .chips:last-child { margin-bottom: 16px; }
+.review-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.review-header .chip { margin-bottom: 0; }
+.counter { font-family: var(--font-mono); color: var(--faint); font-size: 12px; letter-spacing: 0.1em; }
+.del-card {
+  width: 100%; padding: 12px; margin-top: 8px;
+  border: 1px solid #4a3026; border-radius: 13px; background: transparent;
+  color: var(--danger); font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.04em; transition: background 0.15s;
+}
+.del-card:active { background: var(--surface); }
 .flashcard { perspective: 1400px; margin-bottom: 18px; cursor: pointer; }
 .fc-inner {
   position: relative; width: 100%; min-height: 260px;

@@ -171,14 +171,22 @@ export default function App() {
       return s;
     });
 
+  const deleteCard = (cardId) =>
+    update((s) => {
+      s.deletedCards = { ...(s.deletedCards ?? {}), [cardId]: true };
+      return s;
+    });
+
   const dueCards = useMemo(() => {
     const now = Date.now();
+    const deleted = state.deletedCards ?? {};
     const out = [];
     for (const l of content.lessons) {
       if (!completed[l.id]) continue;
       for (const c of l.cards) {
+        if (deleted[c.id]) continue;
         const st = cardState[c.id];
-        if (!st || st.due <= now) out.push(c);
+        if (!st || st.due <= now) out.push({ ...c, _level: l.level, _area: l.area });
       }
     }
     return out.sort((a, b) => (cardState[a.id]?.due ?? 0) - (cardState[b.id]?.due ?? 0));
@@ -229,7 +237,7 @@ export default function App() {
             />
           );
         })()}
-        {tab === "repaso" && <Review cards={dueCards} onGrade={gradeCard} />}
+        {tab === "repaso" && <Review cards={dueCards} onGrade={gradeCard} onDelete={deleteCard} />}
         {tab === "perfil" && (
           <Perfil
             completed={completed}
@@ -369,19 +377,112 @@ function Lesson({ lesson, done, nextId, onComplete, onNavigate, onBack }) {
   );
 }
 
-function Review({ cards, onGrade }) {
+function Review({ cards, onGrade, onDelete }) {
   const [i, setI] = useState(0);
   const [show, setShow] = useState(false);
+  const [selLevels, setSelLevels] = useState([]);
+  const [selAreas, setSelAreas] = useState([]);
+  const [random, setRandom] = useState(false);
+  const [seed, setSeed] = useState(1);
+  const [areasOpen, setAreasOpen] = useState(false);
+
+  const availLevels = useMemo(() => [...new Set(cards.map((c) => c._level).filter(Boolean))], [cards]);
+  const availAreas = useMemo(() => [...new Set(cards.map((c) => c._area).filter(Boolean))], [cards]);
+
+  const filtered = useMemo(() => {
+    let out = cards;
+    if (selLevels.length) out = out.filter((c) => selLevels.includes(c._level));
+    if (selAreas.length) out = out.filter((c) => selAreas.includes(c._area));
+    return out;
+  }, [cards, selLevels, selAreas]);
+
+  const displayCards = useMemo(() => {
+    if (!random) return filtered;
+    const arr = [...filtered];
+    let s = seed;
+    for (let j = arr.length - 1; j > 0; j--) {
+      s = (s * 1103515245 + 12345) & 0x7fffffff;
+      const k = s % (j + 1);
+      [arr[j], arr[k]] = [arr[k], arr[j]];
+    }
+    return arr;
+  }, [filtered, random, seed]);
+
+  useEffect(() => { setI(0); setShow(false); }, [selLevels, selAreas, random, seed]);
+
+  const toggleLevel = (id) => setSelLevels((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
+  const toggleArea = (id) => setSelAreas((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
+
+  const filterPanel = (
+    <div className="review-filters">
+      <div className="chips">
+        {availLevels.map((lvl) => {
+          const lbl = content.ladder.find((l) => l.id === lvl)?.label ?? lvl;
+          return (
+            <button key={lvl} className={"chip" + (selLevels.includes(lvl) ? " on" : "")} onClick={() => toggleLevel(lvl)}>
+              {lbl}
+            </button>
+          );
+        })}
+        {availAreas.length > 0 && (
+          <button className={"chip" + (areasOpen ? " on" : "")} onClick={() => setAreasOpen((x) => !x)}>
+            Áreas {areasOpen ? "▾" : "▸"}
+          </button>
+        )}
+      </div>
+      {areasOpen && (
+        <div className="chips">
+          {availAreas.map((area) => {
+            const a = content.areas.find((x) => x.id === area);
+            return (
+              <button key={area} className={"chip" + (selAreas.includes(area) ? " on" : "")} onClick={() => toggleArea(area)}>
+                {a?.icon} {a?.label ?? area}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 
   if (cards.length === 0) {
     return <p className="empty">Nada para repasar ahora. ✦<br />Aprendé lecciones en <b>Aprender</b> para sumar tarjetas.</p>;
   }
-  const card = cards[Math.min(i, cards.length - 1)];
+
+  if (displayCards.length === 0) {
+    return (
+      <div className="review">
+        {filterPanel}
+        <p className="empty">Ninguna tarjeta coincide con los filtros. ✦</p>
+      </div>
+    );
+  }
+
+  if (i >= displayCards.length) {
+    return (
+      <div className="review">
+        {filterPanel}
+        <p className="empty">¡Sesión completa! ✦</p>
+        <button className="ghost" onClick={() => { setI(0); setShow(false); if (random) setSeed(Date.now()); }}>
+          Repetir sesión
+        </button>
+      </div>
+    );
+  }
+
+  const card = displayCards[i];
   const grade = (g) => { onGrade(card, g); setShow(false); setI((n) => n + 1); };
+  const del = () => { onDelete(card.id); setShow(false); };
 
   return (
     <div className="review">
-      <div className="counter">{Math.min(i + 1, cards.length)} / {cards.length}</div>
+      {filterPanel}
+      <div className="review-header">
+        <div className="counter">{i + 1} / {displayCards.length}</div>
+        <button className={"chip" + (random ? " on" : "")} onClick={() => { setRandom((r) => !r); setSeed(Date.now()); }}>
+          🔀 Aleatorio
+        </button>
+      </div>
       <div className={"flashcard" + (show ? " flipped" : "")} onClick={() => setShow((s) => !s)}>
         <div className="fc-inner">
           <div className="fc-face fc-front">{card.front}</div>
@@ -391,11 +492,14 @@ function Review({ cards, onGrade }) {
       {!show ? (
         <button className="primary" onClick={() => setShow(true)}>Mostrar respuesta</button>
       ) : (
-        <div className="grades">
-          <button className="again" onClick={() => grade("again")}>Otra vez</button>
-          <button className="good" onClick={() => grade("good")}>Bien</button>
-          <button className="easy" onClick={() => grade("easy")}>Fácil</button>
-        </div>
+        <>
+          <div className="grades">
+            <button className="again" onClick={() => grade("again")}>Otra vez</button>
+            <button className="good" onClick={() => grade("good")}>Bien</button>
+            <button className="easy" onClick={() => grade("easy")}>Fácil</button>
+          </div>
+          <button className="del-card" onClick={del}>Eliminar tarjeta</button>
+        </>
       )}
     </div>
   );
