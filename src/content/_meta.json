@@ -17,6 +17,7 @@
     { "id": "arquitectura", "label": "Arquitectura de computadoras", "icon": "🔧" },
     { "id": "git", "label": "Control de versiones (Git)", "icon": "🔀" },
     { "id": "testing", "label": "Testing", "icon": "✅" },
+    { "id": "seguridad", "label": "Seguridad", "icon": "🔒" },
     { "id": "system-design", "label": "System Design", "icon": "🏗️" }
   ]
 }
