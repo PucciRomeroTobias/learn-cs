@@ -18,6 +18,7 @@
     { "id": "git", "label": "Control de versiones (Git)", "icon": "🔀" },
     { "id": "testing", "label": "Testing", "icon": "✅" },
     { "id": "seguridad", "label": "Seguridad", "icon": "🔒" },
-    { "id": "system-design", "label": "System Design", "icon": "🏗️" }
+    { "id": "system-design", "label": "System Design", "icon": "🏗️" },
+    { "id": "casos", "label": "Casos de diseño", "icon": "📐" }
   ]
 }

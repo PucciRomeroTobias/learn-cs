@@ -1,0 +1,128 @@
+{
+  "lessons": [
+    {
+      "id": "sd-url-shortener",
+      "level": "ssr",
+      "area": "casos",
+      "title": "Caso: acortador de URLs (URL shortener design)",
+      "summary": "Diseñar bit.ly de punta a punta.",
+      "added": "2026-07-06",
+      "body": "Diseñar un **acortador de URLs (URL shortener)** tipo bit.ly es el caso de entrada clásico: es chico pero toca **generación de IDs, base de datos, cache y lectura muy pesada**. Lo usamos para fijar el método que después sirve para cualquier caso.\n\n## 1. Requisitos\n\n**Funcionales:**\n- Dada una URL larga, devolver un código corto (ej: `short.ly/abc123`).\n- Al acceder al código, redirigir a la URL original.\n- (Opcional) códigos personalizados y expiración.\n\n**No funcionales:**\n- **Lectura muy pesada**: muchísimos más redirects que creaciones (ratio ~100:1, asunción ilustrativa — algunas fuentes usan 10:1).\n- **Baja latencia** en el redirect (es el camino caliente, el 99% del tráfico).\n- **Alta disponibilidad**: si se cae, se rompen millones de links publicados.\n\n## 2. Estimaciones (back-of-the-envelope)\n\n- Escrituras: 100M URLs nuevas por mes ≈ **40 URLs/s**.\n- Lecturas (redirects): ratio 100:1 → **4.000 redirects/s** promedio, ~**10.000/s** en pico.\n- Storage: 100M/mes × 5 años ≈ 6.000M URLs × ~500 bytes ≈ **3 TB**.\n\nEstos números **dictan el diseño**: la escritura es trivial; el desafío son las lecturas → cache.\n\n## 3. API\n\n```http\nPOST /urls        body: {'long_url': '...'}   ->  {'short_code': 'abc123'}\nGET  /{short_code}                            ->  302 Location: <URL larga>\n```\n\n## 4. Diagrama de alto nivel\n\n```mermaid\nflowchart LR\n  usuario[Usuario] --> lb[Load Balancer]\n  lb --> app[Servicio de URLs - stateless]\n  app --> cache[(Cache Redis - hot URLs)]\n  cache -- miss --> db[(Base de datos)]\n  app --> resp[302 Location URL larga]\n```\n\n## 5. Deep dive: generar el código corto\n\nDos enfoques y su trade-off:\n\n| Enfoque | Cómo | Pro | Contra |\n|---|---|---|---|\n| **Base62 sobre ID autoincremental** | tomar el ID entero de la DB y convertirlo a base62 [0-9a-zA-Z] | sin colisiones; corto (7 chars = 62^7 ≈ 3.5 billones) | el contador es un punto central; códigos predecibles |\n| **Hash + truncate** | hashear la URL (MD5/SHA) y tomar 7 chars | no necesita contador central | hay que resolver colisiones (reintentar con otro tramo) |\n\nPara escala, el ID autoincremental no se pide de a uno: cada nodo **reserva un rango de IDs** (ej: 1000 a la vez) o se usa un generador distribuido tipo **Snowflake**, así el contador deja de ser un cuello único.\n\n## 6. Deep dive: el redirect y la cache\n\nEl redirect es casi todo el tráfico, así que se optimiza a fondo:\n\n- **Cache-aside (cache-first)**: buscar en Redis primero; solo en **miss** ir a la DB y popular la cache. Como una URL **nunca cambia** (write-once), la cache casi no se invalida — enorme ventaja. (Si se soporta **expiración**, la entrada usa un **TTL** alineado con el vencimiento en la DB.)\n- **301 vs 302**: `301 Moved Permanently` lo cachea el browser (menos carga, pero perdés analytics); `302 Found` hace que cada visita pase por tu servidor (podés contar clicks). Se elige según si necesitás métricas.\n- La distribución del tráfico sigue una **ley de potencia (power law / Zipf)** — el clásico **80/20**: pocas URLs concentran el grueso del tráfico → la cache tiene un hit rate altísimo y protege a la DB.\n\n## 7. Escala y cuellos de botella\n\n- La DB de URLs es **write-once**: se puede **shardear por short_code** sin dramas de consistencia.\n- Read replicas + cache absorben las lecturas; los app servers son **stateless** detrás del load balancer.\n- El generador de IDs es el único punto delicado → rangos o Snowflake.\n\n💡 **En la entrevista:** arrancá por los números (ratio lectura/escritura), justificá base62 vs hash, explicá que **la cache es el corazón del diseño** porque es lectura pesada y write-once, y cerrá con 301 vs 302 según si necesitás analytics.",
+      "cards": [
+        {
+          "id": "sd-url-shortener-1",
+          "front": "¿Cuál es el ratio típico lectura/escritura de un URL shortener?",
+          "back": "Muy alto a favor de lectura: muchísimos más redirects que creaciones (asunción típica ~100:1; algunas fuentes usan 10:1). Lo define como sistema de lectura pesada y justifica cache agresivo.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-url-shortener-2",
+          "front": "¿Cómo funciona la generación de código con Base62?",
+          "back": "Cada URL recibe un ID entero autoincremental de la DB, que se convierte a base62 [0-9a-zA-Z]. Con 7 caracteres hay ~3,5 billones de combinaciones (62^7 ≈ 3.521.614.606.208).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-url-shortener-3",
+          "front": "¿Diferencia entre HTTP 301 y 302 en un URL shortener?",
+          "back": "301 Moved Permanently: el browser cachea el redirect, futuras visitas no pasan por el servidor (menos carga, sin analytics). 302 Found: cada visita pasa por el servidor (analytics, más carga).",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-url-shortener-4",
+          "front": "¿Por qué el URL shortener es fácil de cachear?",
+          "back": "Las URLs son write-once: nunca se modifican después de creadas. No hay problema de invalidación — la cache nunca queda stale mientras la URL exista.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-url-shortener-5",
+          "front": "¿Qué columnas mínimas necesita la tabla de URLs?",
+          "back": "id (BIGINT autoincremental), short_code (VARCHAR, base62 del id), long_url (TEXT), created_at (TIMESTAMP). Opcional user_id para usuarios registrados.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-url-shortener-6",
+          "front": "¿Cómo optimizás el URL shortener para el pico de lecturas?",
+          "back": "Cache Redis con hot URLs (80/20: pocas URLs concentran el tráfico). Réplicas de lectura para los misses. Load balancer delante de app servers stateless.",
+          "added": "2026-06-09"
+        },
+        {
+          "id": "sd-url-shortener-7",
+          "front": "¿Cómo estimás la carga de un URL shortener (back-of-the-envelope)?",
+          "back": "Escrituras: decenas/s (100M/mes ≈ 40/s). Lecturas: miles/s por el ratio ~100:1. Storage: URLs × años × ~500 bytes (≈ TB). Los no funcionales (lectura pesada) dictan el diseño.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "sd-url-shortener-8",
+          "front": "¿Cómo evitás que el generador de IDs sea un cuello de botella?",
+          "back": "En vez de un único contador central, cada nodo reserva rangos de IDs (ej: de a 1000) o se usa un generador distribuido tipo Snowflake.",
+          "added": "2026-07-06"
+        }
+      ]
+    },
+    {
+      "id": "caso-rag-chatbot",
+      "level": "ssr",
+      "area": "casos",
+      "title": "Caso: chatbot de soporte con RAG (RAG chatbot design)",
+      "summary": "Retrieval-Augmented Generation de punta a punta.",
+      "added": "2026-07-06",
+      "body": "Diseñar un **chatbot de soporte con RAG (Retrieval-Augmented Generation)** es hoy la pregunta de apertura más común en entrevistas de AI Engineer. El problema: un **LLM** no conoce la documentación privada de la empresa y, si le preguntás igual, **alucina (hallucination)**. RAG lo resuelve **recuperando** los documentos relevantes y pasándoselos al modelo como contexto.\n\n## 1. Requisitos\n\n**Funcionales:**\n- El usuario pregunta en lenguaje natural.\n- El sistema responde usando la **base de conocimiento** de la empresa (docs, tickets, FAQs) y **cita las fuentes**.\n- Conversación **multi-turno** (recuerda el contexto del chat).\n\n**No funcionales:**\n- **Baja latencia percibida** → respuesta en **streaming** de tokens.\n- **Costo por consulta** controlado (los tokens del LLM se pagan).\n- **Pocas alucinaciones** → mejor responder 'no lo sé' que inventar.\n- Escalar a miles de consultas concurrentes.\n\n## 2. Dos fases: indexación y consulta\n\nRAG tiene un pipeline **offline** (indexar el conocimiento) y uno **online** (responder). Confundirlos es el error clásico en la entrevista.\n\n**Indexación (offline, batch):**\n1. **Chunking**: partir cada documento en fragmentos (chunks) de ~500 tokens.\n2. **Embeddings**: convertir cada chunk en un vector con un modelo de embeddings.\n3. Guardar los vectores en una **base de datos vectorial (vector database)** junto con su texto y metadata.\n\n**Consulta (online, por request):**\n1. **Contextualizar la pregunta con el historial** (query rewriting): convertir un follow-up como '¿y en Europa?' en una consulta autónoma usando el historial del chat.\n2. Embeddear la pregunta ya reescrita.\n3. **Retrieval**: buscar los k chunks más cercanos por similitud (vector search).\n4. Armar el **prompt**: instrucciones + chunks recuperados + **historial de la conversación** + pregunta.\n5. Llamar al **LLM** y **streamear** la respuesta con las citas.\n\n## 3. Diagrama de alto nivel\n\n```mermaid\nflowchart TB\n  subgraph indexacion[Indexacion - offline]\n    docs[Documentos] --> chunk[Chunking]\n    chunk --> emb1[Modelo de embeddings]\n    emb1 --> vdb[(Vector DB)]\n  end\n  subgraph consulta[Consulta - online]\n    q[Pregunta del usuario] --> rw[Contextualizar con historial - query rewriting]\n    rw --> emb2[Embedding de la query]\n    emb2 --> retr[Retrieval - top k similares]\n    vdb --> retr\n    retr --> prompt[Armar prompt con contexto]\n    prompt --> llm[LLM]\n    llm --> stream[Respuesta en streaming con citas]\n  end\n```\n\n## 4. Estimaciones (costo y tamaño del índice)\n\n- **Tokens por consulta**: instrucciones (~200) + k=5 chunks × ~500 tokens (~2.500) + pregunta (~50) ≈ **2.750 tokens de input** y ~300 de output. El **contexto recuperado domina** el input, así que menos o menores chunks bajan el costo directamente.\n- **Costo por consulta** ≈ tokens_input × precio_input + tokens_output × precio_output. Como el input manda, las palancas son recortar chunks y usar un modelo más chico para queries simples.\n- **Tamaño del índice vectorial**: N chunks × dimensión del embedding × 4 bytes (float32). Ej: 1M chunks × 1.536 dims × 4 B ≈ **6 GB** solo de vectores (sin contar el texto ni los índices ANN).\n\n## 5. Deep dive: retrieval de calidad\n\nLa calidad de la respuesta depende **más del retrieval que del LLM**: si le pasás los chunks equivocados, el mejor modelo responde mal. Palancas:\n\n| Técnica | Para qué |\n|---|---|\n| **Chunking** correcto | chunks muy grandes diluyen el contexto; muy chicos lo pierden |\n| **Hybrid search** | combinar vector search (semántico) con BM25 (keywords) mejora el recall |\n| **Re-ranking** | un modelo reordena los top-k por relevancia real antes de mandarlos al LLM |\n| **Metadata filtering** | filtrar por producto, fecha o permisos del usuario antes de buscar |\n\n## 6. Deep dive: latencia, costo y alucinaciones\n\n- **Latencia**: el LLM domina el tiempo de respuesta → **streaming** de tokens (SSE) para que el usuario vea la respuesta apenas empieza. **Semantic cache** para preguntas frecuentes.\n- **Costo**: menos chunks y más chicos = menos tokens de input = menos plata. Un modelo chico para queries simples y uno grande para las difíciles (**model routing**).\n- **Alucinaciones**: instruir 'respondé solo con el contexto; si no está, decí que no sabés' y **mostrar las citas** para que el usuario verifique.\n- **Prompt injection indirecto**: el contenido recuperado (tickets, texto de usuarios) no es confiable y puede intentar secuestrar las instrucciones. Tratá los chunks como **datos, no instrucciones**, y aislá/sanitizá el contexto.\n- **Evaluación**: medir con un set de preguntas-respuestas; un **LLM-as-judge** puntúa relevancia y fidelidad. En 2026 la evaluación pesa tanto como el diagrama.\n\n## 7. Escala\n\n- La **vector DB** (Pinecone, Weaviate, pgvector) escala el retrieval; se particiona por tenant/namespace.\n- El **serving del LLM** es el cuello caro → **batching** de requests, autoscaling por GPU y una cola si hay picos.\n- La indexación corre async y se re-ejecuta cuando cambian los documentos.\n\n💡 **En la entrevista:** separá **indexación (offline)** de **consulta (online)**, aclará el manejo **multi-turno** (query rewriting), remarcá que la **calidad del retrieval manda** (hybrid + re-ranking), y cerrá con lo que hoy más puntúan: **costo por token, latencia con streaming, control de alucinaciones y evaluación**.",
+      "cards": [
+        {
+          "id": "caso-rag-chatbot-1",
+          "front": "¿Qué problema resuelve RAG?",
+          "back": "El LLM no conoce datos privados de la empresa y alucina. RAG recupera los documentos relevantes y se los pasa como contexto para que responda con información real y citada.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rag-chatbot-2",
+          "front": "¿Cuáles son las dos fases de un sistema RAG?",
+          "back": "Indexación (offline: chunking → embeddings → vector DB) y consulta (online: embed de la query → retrieval → armar prompt → LLM → respuesta).",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rag-chatbot-3",
+          "front": "¿Qué es el chunking y por qué importa?",
+          "back": "Partir los documentos en fragmentos antes de embeddearlos. Chunks muy grandes diluyen el contexto; muy chicos pierden información. Es una palanca clave de calidad.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rag-chatbot-4",
+          "front": "¿Qué es hybrid search en RAG?",
+          "back": "Combinar vector search (similitud semántica) con BM25 (coincidencia de keywords) para mejorar el recall del retrieval.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rag-chatbot-5",
+          "front": "¿Para qué sirve el re-ranking en RAG?",
+          "back": "Reordenar los top-k recuperados por relevancia real antes de pasarlos al LLM. El re-ranker suele ser un cross-encoder (más preciso pero más lento que el bi-encoder del retrieval), por eso se aplica solo al top-k y no a todo el corpus.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rag-chatbot-6",
+          "front": "¿Cómo se reducen las alucinaciones en un RAG?",
+          "back": "Instruir al modelo a responder solo con el contexto y decir 'no sé' si falta, y mostrar las citas de las fuentes para que el usuario verifique.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rag-chatbot-7",
+          "front": "¿Cómo se bajan costo y latencia de un RAG?",
+          "back": "Costo: menos/menores chunks (menos tokens) y model routing. Latencia: streaming de tokens (SSE) para latencia percibida y semantic cache para preguntas frecuentes.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rag-chatbot-8",
+          "front": "¿Por qué la evaluación es clave en RAG (2026)?",
+          "back": "Se mide relevancia y fidelidad con un set de preguntas-respuestas y un LLM-as-judge. Hoy importa tanto como la arquitectura: sin evaluación no sabés si el sistema mejora o empeora.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rag-chatbot-9",
+          "front": "En un RAG multi-turno, ¿cómo se maneja el historial de conversación?",
+          "back": "Con query rewriting (contextualización): antes de embeddear, se reescribe el follow-up ('¿y en Europa?') como una consulta autónoma usando el historial. Además, el historial se incluye en el prompt final que va al LLM.",
+          "added": "2026-07-06"
+        }
+      ]
+    }
+  ]
+}

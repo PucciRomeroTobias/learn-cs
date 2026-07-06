@@ -306,53 +306,6 @@
       ]
     },
     {
-      "id": "sd-url-shortener",
-      "level": "jr",
-      "area": "system-design",
-      "title": "Ejercicio: diseño de URL shortener (URL shortener design)",
-      "summary": "Diseñar bit.ly desde cero, paso a paso.",
-      "added": "2026-06-09",
-      "body": "El URL shortener es el ejercicio de system design más clásico para nivel junior. Toca escalabilidad, DB, cache y diseño de API en un problema pequeño y acotado.\n\n**Requerimientos**: dado una URL larga, generar un código corto (ej: `bit.ly/abc123`). Al acceder al código corto, redirigir al usuario a la URL original. Los números típicos de entrevista: 100M URLs creadas, 1B redirects por día (ratio 10:1 lectura pesada).\n\n**Generación del código**: dos enfoques. (1) **Base62 + ID autoincremental**: cada URL nueva recibe un ID entero del DB, se convierte a base62 `[0-9a-zA-Z]`. Con 7 caracteres tenés 62^7 ≈ 3.500 billones de combinaciones. (2) **Hash + truncate**: aplicar MD5/SHA256 a la URL y tomar los primeros 7 caracteres. Más simple pero requiere manejo de colisiones.\n\n**Redirect**: el servidor busca el código en cache primero (Redis), si no está va a DB, y devuelve `301 Moved Permanently` (se cachea en browser) o `302 Found` (tráfico siempre pasa por el servidor, útil para analytics).\n\n```mermaid\nflowchart LR\n  usuario[Usuario] --> lb[Load Balancer]\n  lb --> app[App Server]\n  app --> cache[(Cache Redis - hot URLs)]\n  cache -- miss --> db[(DB - url_map)]\n  app --> resp[HTTP 302 Location: URL larga]\n```\n\n## Razonamiento de escala\n\nCon 1B redirects por día: ~11.600 req/s promedio, ~50.000 req/s en pico. El DB de escritura solo recibe 100M/día (~1.200 req/s), manejable. Las lecturas son el desafío: con cache Redis y hot URLs (20% de URLs generan 80% del tráfico), la mayoría de las 11.600 req/s se resuelven en cache sin tocar el DB.\n\n```\nTabla: urls\n  id          BIGINT   -- autoincremental\n  short_code  VARCHAR  -- base62 del id\n  long_url    TEXT\n  created_at  TIMESTAMP\n  user_id     BIGINT   -- nullable\n```\n\n💡 **En la entrevista:** empezá con los números, justificá la elección 301 vs 302 según si necesitás analytics, explicá por qué cache es la clave del diseño (lectura pesada), y mencioná que el DB de URLs es write-once (nunca se actualiza), lo que simplifica mucho la invalidación de cache.",
-      "cards": [
-        {
-          "id": "sd-url-shortener-1",
-          "front": "¿Cuál es el ratio típico lectura/escritura de un URL shortener?",
-          "back": "10:1 aproximadamente. Muchos más redirects que creaciones. Esto lo define como un sistema de lectura pesada y justifica usar cache agresivo.",
-          "added": "2026-06-09"
-        },
-        {
-          "id": "sd-url-shortener-2",
-          "front": "¿Cómo funciona la generación de código con Base62?",
-          "back": "Cada URL recibe un ID entero autoincremental de la DB, que se convierte a base62 [0-9a-zA-Z]. Con 7 caracteres tenés ~3.500 billones de combinaciones posibles.",
-          "added": "2026-06-09"
-        },
-        {
-          "id": "sd-url-shortener-3",
-          "front": "¿Diferencia entre HTTP 301 y 302 en el contexto de URL shortener?",
-          "back": "301 Moved Permanently: el browser cachea el redirect, futuras visitas no pasan por el servidor (menos carga, sin analytics). 302 Found: cada visita pasa por el servidor (analytics completos, más carga).",
-          "added": "2026-06-09"
-        },
-        {
-          "id": "sd-url-shortener-4",
-          "front": "¿Por qué el URL shortener es fácil de cachear?",
-          "back": "Las URLs son write-once: nunca se modifican después de creadas. No hay problema de invalidación — el cache nunca queda stale mientras la URL exista.",
-          "added": "2026-06-09"
-        },
-        {
-          "id": "sd-url-shortener-5",
-          "front": "¿Qué columnas mínimas necesita la tabla de URLs?",
-          "back": "id (BIGINT autoincremental), short_code (VARCHAR, base62 del id), long_url (TEXT), created_at (TIMESTAMP). Opcionalmente user_id para URLs de usuarios registrados.",
-          "added": "2026-06-09"
-        },
-        {
-          "id": "sd-url-shortener-6",
-          "front": "¿Cómo optimizás el URL shortener para 50.000 req/s en pico?",
-          "back": "Cache Redis con hot URLs (20% de URLs generan 80% del tráfico). Réplicas de lectura para misses de cache. Load balancer delante de múltiples app servers stateless.",
-          "added": "2026-06-09"
-        }
-      ]
-    },
-    {
       "id": "sd-cap-theorem",
       "level": "jr",
       "area": "system-design",
