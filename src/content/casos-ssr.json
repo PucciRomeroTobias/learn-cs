@@ -123,6 +123,412 @@
           "added": "2026-07-06"
         }
       ]
+    },
+    {
+      "id": "caso-rate-limiter",
+      "level": "ssr",
+      "area": "casos",
+      "title": "Caso: rate limiter (rate limiter design)",
+      "summary": "Limitar cuántas requests hace cada cliente.",
+      "added": "2026-07-06",
+      "body": "Un **rate limiter (limitador de tasa)** controla cuántas requests puede hacer un cliente en una ventana de tiempo (ej: 100 req/min por API key). Es el guardián que protege un servicio de abuso, picos y costos descontrolados — muy relevante para **APIs de LLM**, donde cada request cuesta plata.\n\n## 1. Requisitos\n\n**Funcionales:**\n- Permitir hasta N requests por cliente por ventana; al exceder, responder **429 Too Many Requests**.\n- Devolver headers informativos (`X-RateLimit-Remaining`, `Retry-After`).\n\n**No funcionales:**\n- **Baja latencia**: está en el camino caliente de cada request; el chequeo tiene que ser **O(1)** y en memoria.\n- **Distribuido**: varios servidores comparten el mismo límite por cliente.\n- Tolerar una pequeña imprecisión antes que agregar latencia.\n\n## 2. Deep dive: algoritmos\n\n| Algoritmo | Cómo funciona | Trade-off |\n|---|---|---|\n| **Token bucket** | un balde se rellena a tasa fija; cada request consume un token | permite ráfagas (bursts); simple — el más usado |\n| **Leaky bucket** | una cola drena a tasa constante | suaviza los picos, pero no permite bursts |\n| **Fixed window** | contador por ventana fija (ej: por minuto) | simple, pero deja pasar hasta 2x en el borde de dos ventanas |\n| **Sliding window log** | guarda el timestamp de cada request | preciso, pero caro en memoria |\n| **Sliding window counter** | aproxima con la ventana actual y la anterior | buen balance precisión/memoria |\n\n## 3. Deep dive: distribuido\n\nCon varios servidores, el contador vive en un store central de baja latencia (**Redis**). El chequeo debe ser **atómico**: `INCR` + `EXPIRE` como dos comandos separados **no** lo es (si el proceso falla en el medio, la key queda sin TTL) → se usa un **script Lua** (o `SET ... NX EX`). Para no pagar una ida a Redis por request, cada nodo puede mantener un contador local y sincronizar cada tanto — se acepta un pequeño **overcount** a cambio de latencia.\n\n```mermaid\nflowchart LR\n  cliente[Cliente] --> rl[Rate limiter]\n  rl --> redis[(Redis - contador por cliente)]\n  rl -- dentro del limite --> app[Servicio]\n  rl -- excedido --> err[429 Too Many Requests + Retry-After]\n```\n\n## 4. Escala\n\n- La clave del contador es por dimensión: por API key, por IP, o por user_id (según a quién limitás).\n- Redis particionado por clave escala horizontal; el TTL de la ventana limpia solo.\n- Cuotas por **tier** (free vs pago) es lo habitual en APIs comerciales y de LLM.\n\n💡 **En la entrevista:** la respuesta por defecto es **token bucket** (permite bursts y es simple), contador en **Redis** para distribuido, y responder **429 con Retry-After**. Mencioná el problema de borde del fixed window para mostrar que conocés los trade-offs.",
+      "cards": [
+        {
+          "id": "caso-rate-limiter-1",
+          "front": "¿Cómo funciona el algoritmo token bucket?",
+          "back": "Un balde se rellena con tokens a tasa fija; cada request consume un token. Si hay tokens, pasa; si no, se rechaza. Permite ráfagas (bursts) y es simple: el más usado.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rate-limiter-2",
+          "front": "¿Cuál es el problema del fixed window counter?",
+          "back": "En el borde entre dos ventanas puede dejar pasar hasta el doble del límite (ej: el final de un minuto + el principio del siguiente). El sliding window lo resuelve.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rate-limiter-3",
+          "front": "¿Qué status code y headers usa un rate limiter?",
+          "back": "429 Too Many Requests al exceder, con headers como Retry-After (cuándo reintentar) y X-RateLimit-Remaining (cuota restante).",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rate-limiter-4",
+          "front": "¿Cómo se implementa un rate limiter distribuido?",
+          "back": "El contador vive en un store central de baja latencia (Redis). La atomicidad la da un script Lua (INCR + EXPIRE juntos): hacerlos como comandos separados no es atómico (la key podría quedar sin TTL). Se puede aceptar un pequeño overcount para no pagar una ida a Redis por request.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rate-limiter-5",
+          "front": "¿Por qué el rate limiter debe ser O(1) y en memoria?",
+          "back": "Está en el camino caliente de cada request; cualquier latencia extra afecta a todo el tráfico. Por eso se usa un store en memoria como Redis y algoritmos de costo constante.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rate-limiter-6",
+          "front": "¿Por qué el rate limiting es clave en APIs de LLM?",
+          "back": "Cada request al modelo cuesta plata (tokens) y GPU. Limitar por usuario/tier protege el costo, evita abuso y garantiza capacidad justa entre clientes.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-rate-limiter-7",
+          "front": "¿Qué es el sliding window counter?",
+          "back": "Un híbrido que aproxima la tasa combinando el contador de la ventana actual con una fracción de la anterior. Da buen balance entre la precisión del sliding window log y el bajo costo del fixed window, sin el problema de borde.",
+          "added": "2026-07-06"
+        }
+      ]
+    },
+    {
+      "id": "caso-news-feed",
+      "level": "ssr",
+      "area": "casos",
+      "title": "Caso: news feed / timeline (news feed design)",
+      "summary": "Armar el feed de posts de quienes seguís.",
+      "added": "2026-07-06",
+      "body": "Diseñar el **news feed (timeline)** tipo Twitter/Instagram: cada usuario ve un feed con los posts de la gente que sigue. Es un caso clásico de **lectura pesada** donde la decisión central es **cuándo** se arma el feed.\n\n## 1. Requisitos\n\n**Funcionales:**\n- Publicar un post.\n- Ver el feed con los posts de a quienes seguís, ordenado (cronológico o por relevancia).\n\n**No funcionales:**\n- **Lectura muy pesada**: se lee el feed muchísimo más de lo que se postea.\n- **Baja latencia** al abrir el feed.\n- Manejar usuarios con **millones de seguidores** (celebrities).\n\n## 2. Deep dive: fan-out on write vs on read\n\nEs LA decisión del problema: ¿el feed se pre-arma al postear o se arma al leer?\n\n| Estrategia | Cómo | Pro | Contra |\n|---|---|---|---|\n| **Fan-out on write (push)** | al postear, se inserta el post en el feed cacheado de cada seguidor | leer el feed es instantáneo | postear de una celebrity dispara millones de escrituras (hot key) |\n| **Fan-out on read (pull)** | el feed se arma al momento de leer, juntando posts de a quienes seguís | postear es barato | leer es caro y lento |\n\nLa solución real es **híbrida**: push para usuarios normales (feed pre-armado), y **pull para celebrities** (sus posts se mezclan al momento de leer, evitando el fan-out masivo).\n\n```mermaid\nflowchart TB\n  post[Usuario postea] --> fo[Fan-out service]\n  fo -- usuarios normales - push --> fc[(Feed cache por usuario - Redis)]\n  lectura[Abrir feed] --> fs[Feed service]\n  fc --> fs\n  fs -- mezcla posts de celebrities - pull --> db[(Posts DB)]\n  fs --> feed[Feed final ordenado]\n```\n\n## 3. Deep dive: ranking\n\nEl orden puede ser **cronológico** (simple) o **rankeado por relevancia (ML ranking)**: un modelo predice la probabilidad de engagement (like, comentario) usando features del usuario, del post y del contexto. Los feeds modernos usan ranking con **embeddings** y modelos de engagement — es el mismo patrón que un recommender.\n\n## 4. Escala\n\n- El feed cache (Redis) guarda solo **los últimos N IDs** de posts por usuario (acotado); el contenido se hidrata aparte. En un cache miss, el feed se reconstruye vía pull.\n- Los posts se guardan particionados; las relaciones de follow en su propia tabla/servicio.\n- El fan-out se hace **async** (cola de trabajo), no en el request de postear.\n\n💡 **En la entrevista:** el eje es **fan-out on write vs on read** y por qué el **híbrido** (push normal + pull celebrities) resuelve el problema de la hot key. Cerrá mencionando ranking cronológico vs ML.",
+      "cards": [
+        {
+          "id": "caso-news-feed-1",
+          "front": "¿Qué es fan-out on write (push) en un news feed?",
+          "back": "Al postear, el post se inserta en el feed pre-cacheado de cada seguidor. Leer el feed es instantáneo, pero postear de una cuenta con millones de seguidores dispara millones de escrituras.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-news-feed-2",
+          "front": "¿Qué es fan-out on read (pull)?",
+          "back": "El feed se arma al momento de leer, juntando los posts de las cuentas que seguís. Postear es barato, pero leer es caro y más lento.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-news-feed-3",
+          "front": "¿Cuál es la solución al problema de las celebrities en el feed?",
+          "back": "Un enfoque híbrido: push (fan-out on write) para usuarios normales y pull (fan-out on read) para celebrities, cuyos posts se mezclan al momento de leer para evitar el fan-out masivo.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-news-feed-4",
+          "front": "¿Por qué el fan-out se hace de forma asíncrona?",
+          "back": "Escribir el post en el feed de todos los seguidores puede ser costoso; se hace en una cola de trabajo aparte, no dentro del request de postear, para no bloquearlo.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-news-feed-5",
+          "front": "¿Cronológico vs ranking por ML en el feed?",
+          "back": "Cronológico es simple (por fecha). El ranking por ML ordena por relevancia: un modelo predice engagement (like/comentario) con features de usuario, post y contexto, usando embeddings.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-news-feed-6",
+          "front": "¿Qué se guarda en el feed cache?",
+          "back": "Solo IDs de posts (no el contenido completo); el contenido se hidrata aparte al leer. Así el cache es chico y barato de actualizar.",
+          "added": "2026-07-06"
+        }
+      ]
+    },
+    {
+      "id": "caso-chat",
+      "level": "ssr",
+      "area": "casos",
+      "title": "Caso: sistema de chat (chat / messaging design)",
+      "summary": "Mensajería en tiempo real tipo WhatsApp.",
+      "added": "2026-07-06",
+      "body": "Diseñar un **sistema de chat (messaging)** tipo WhatsApp: mensajes 1:1 y de grupo, en **tiempo real**, con estados de entrega y presencia. El desafío es mantener **millones de conexiones persistentes** y rutear mensajes con baja latencia.\n\n## 1. Requisitos\n\n**Funcionales:**\n- Enviar/recibir mensajes 1:1 y de grupo en tiempo real.\n- Estados: enviado, entregado, leído. Presencia (online/offline).\n- Historial persistente; entrega a usuarios offline.\n\n**No funcionales:**\n- **Baja latencia** y entrega **ordenada y confiable**.\n- Escalar a millones de conexiones concurrentes.\n\n## 2. Deep dive: conexiones en tiempo real\n\nPara push instantáneo del servidor al cliente se usa **WebSocket** (conexión bidireccional persistente), no HTTP request/response ni polling. Cada cliente mantiene una conexión abierta a un **gateway server**.\n\nEl problema: el emisor está conectado al gateway A y el receptor al gateway B. Se necesita un **registro de presencia** (en Redis) que mapea `user_id -> gateway server`, para saber a qué servidor enrutar cada mensaje.\n\n## 3. Deep dive: entrega y almacenamiento\n\n- Si el receptor está **online**, se le empuja el mensaje por su WebSocket.\n- Si está **offline**, el mensaje se persiste y se envía una **push notification**; se entrega al reconectar.\n- **Entrega confiable y dedupe**: cada mensaje lleva un `message_id`; el receptor confirma con **ack** y el emisor reintenta si no llega. El dedupe por `message_id` evita duplicados (at-least-once + dedupe ≈ entrega exactly-once percibida). Nota: el ack de **entregado** y el **read receipt** de leído son señales distintas.\n- **Orden**: el `message_id` debe ser una **secuencia monótona por conversación** (contador local del emisor o ID tipo Snowflake); si un mensaje llega fuera de orden, el receptor lo reordena por ese id.\n- **Almacenamiento**: los mensajes van a una DB optimizada para escritura (ej: **Cassandra**), particionada por `chat_id` y ordenada por tiempo.\n\n```mermaid\nflowchart TB\n  a[Usuario A] -- WebSocket --> gwA[Gateway A]\n  gwA --> reg[(Registro de presencia - Redis)]\n  gwA --> q[Cola de mensajes]\n  q --> gwB[Gateway B]\n  gwB -- WebSocket --> b[Usuario B]\n  q --> db[(Mensajes - Cassandra)]\n```\n\n## 4. Escala\n\n- Los gateways son **stateful respecto a la conexión** (mantienen el socket abierto); no comparten estado de negocio entre sí, así que escalan agregando nodos, pero por eso hace falta el registro de presencia para rutear.\n- Los grupos grandes hacen fan-out del mensaje a cada miembro (como el news feed).\n- Cassandra escala la escritura pesada del historial.\n\n💡 **En la entrevista:** el núcleo es **WebSocket + gateway servers + registro de presencia** para rutear, **cola + push notifications** para offline, y **message_id + ack** para orden y dedupe. Para grupos, fan-out a cada miembro.",
+      "cards": [
+        {
+          "id": "caso-chat-1",
+          "front": "¿Por qué WebSocket y no HTTP polling para un chat?",
+          "back": "WebSocket es una conexión bidireccional persistente: el servidor puede empujar mensajes al cliente al instante, sin el overhead ni la latencia de hacer polling con requests HTTP repetidos.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-chat-2",
+          "front": "¿Cómo se rutea un mensaje entre usuarios en distintos servidores?",
+          "back": "Con un registro de presencia (en Redis) que mapea user_id -> gateway server. Así se sabe a qué servidor está conectado el receptor para enrutar el mensaje.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-chat-3",
+          "front": "¿Qué pasa cuando el receptor está offline?",
+          "back": "El mensaje se persiste en la DB y se dispara una push notification; se entrega cuando el usuario se reconecta.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-chat-4",
+          "front": "¿Cómo se garantiza orden y no duplicados en los mensajes?",
+          "back": "Son dos mecanismos distintos. No duplicados: message_id + ack + reintentos con dedupe por id (exactly-once percibida). Orden: el message_id debe ser una secuencia monótona por chat (contador local del emisor o ID tipo Snowflake), y el receptor reordena si algo llega desordenado.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-chat-5",
+          "front": "¿Qué base de datos conviene para el historial de mensajes y por qué?",
+          "back": "Una optimizada para escritura pesada como Cassandra, particionada por chat_id y ordenada por tiempo, porque el volumen de escritura de mensajes es enorme.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-chat-6",
+          "front": "¿Cómo se manejan los mensajes de grupo?",
+          "back": "Con fan-out: el mensaje se distribuye a cada miembro del grupo (similar al fan-out de un news feed), enrutando a cada uno según el registro de presencia.",
+          "added": "2026-07-06"
+        }
+      ]
+    },
+    {
+      "id": "caso-web-crawler",
+      "level": "ssr",
+      "area": "casos",
+      "title": "Caso: web crawler (web crawler design)",
+      "summary": "Recorrer y descargar la web a escala.",
+      "added": "2026-07-06",
+      "body": "Un **web crawler** recorre la web: parte de URLs semilla (seeds), descarga páginas, extrae los links y los sigue recursivamente. Es la base de los buscadores y, para un AI Engineer, de la **ingesta de datos** para entrenar modelos y alimentar sistemas **RAG**.\n\n## 1. Requisitos\n\n**Funcionales:**\n- Dado un set de seeds, descargar páginas, extraer links y seguirlos.\n- Guardar el contenido para procesarlo después.\n\n**No funcionales:**\n- Escalar a miles de millones de páginas.\n- **Politeness**: no saturar un mismo dominio; respetar `robots.txt`.\n- Evitar volver a visitar lo mismo (dedupe) y ser robusto a fallos.\n\n## 2. Deep dive: arquitectura\n\nEl corazón es el **URL frontier**: una cola de URLs pendientes, **priorizada** (por relevancia estimada: autoridad del dominio, frecuencia de actualización, PageRank). El ciclo es:\n\n1. Sacar una URL del frontier.\n2. **Fetcher**: descargar la página (respetando robots.txt y el rate por dominio).\n3. **Parser**: extraer texto y links.\n4. **Dedupe**: descartar URLs ya vistas.\n5. Encolar las URLs nuevas en el frontier.\n\n```mermaid\nflowchart LR\n  frontier[URL frontier - cola priorizada] --> fetch[Fetchers]\n  fetch --> parse[Parser - extrae links y texto]\n  parse --> store[(Almacenamiento de contenido)]\n  parse --> dedupe[Dedupe de URLs]\n  dedupe --> frontier\n```\n\n## 3. Deep dive: politeness y dedupe\n\n- **Politeness**: se limita la tasa de requests **por dominio** (colas separadas por host) y se respeta `robots.txt`. Martillar un sitio te banea.\n- **Dedupe de URLs**: a escala de miles de millones, un set exacto no entra en memoria → se usa un **bloom filter** (probabilístico, compacto; puede dar falsos positivos pero no falsos negativos).\n- **Dedupe de contenido**: hash del contenido (o *simhash* para casi-duplicados) para detectar mirrors y páginas repetidas.\n- **Crawler traps**: páginas que generan URLs infinitas (ej: calendarios dinámicos, rutas repetidas). Se mitigan con **límite de profundidad** y **normalización de URL** (sacar parámetros de tracking/session antes de dedupear).\n\n## 4. Escala\n\n- Fetchers distribuidos, particionando el frontier por dominio (así la politeness es local a cada worker).\n- El recorrido es en esencia un **BFS** sobre el grafo de la web.\n\n💡 **En la entrevista:** el eje es el **URL frontier** + **politeness** (rate por dominio, robots.txt) + **dedupe con bloom filter** a escala. Para AI, remarcá que es el primer paso de armar un dataset o una base de conocimiento para RAG.",
+      "cards": [
+        {
+          "id": "caso-web-crawler-1",
+          "front": "¿Qué es el URL frontier en un web crawler?",
+          "back": "La cola (priorizada) de URLs pendientes de visitar. Es el corazón del crawler: se saca una URL, se descarga, se extraen links y las nuevas se vuelven a encolar.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-web-crawler-2",
+          "front": "¿Qué es la politeness y cómo se implementa?",
+          "back": "No saturar un mismo dominio: se limita la tasa de requests por host (colas separadas por dominio) y se respeta robots.txt. Martillar un sitio lleva a que te baneen.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-web-crawler-3",
+          "front": "¿Cómo se hace dedupe de URLs a escala de miles de millones?",
+          "back": "Con un bloom filter: estructura probabilística y compacta que dice si una URL ya se vio. Puede dar falsos positivos pero nunca falsos negativos, y usa poca memoria.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-web-crawler-4",
+          "front": "¿Cómo se detecta contenido duplicado (no solo URLs)?",
+          "back": "Con un hash del contenido (o simhash para casi-duplicados) para identificar mirrors y páginas repetidas con distinta URL.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-web-crawler-5",
+          "front": "¿Qué recorrido de grafo hace un crawler?",
+          "back": "Un BFS sobre el grafo de la web: desde las seeds explora en anchura siguiendo los links, con el frontier haciendo de cola.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-web-crawler-6",
+          "front": "¿Por qué el crawling importa para un AI Engineer?",
+          "back": "Es el primer paso de la ingesta de datos: armar datasets para entrenar modelos y traer documentos/web para alimentar sistemas RAG.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-web-crawler-7",
+          "front": "¿Qué es un crawler trap y cómo se evita?",
+          "back": "Páginas que generan URLs infinitas (calendarios dinámicos, rutas repetidas) y hacen crawlear sin fin. Se mitigan con límite de profundidad y normalización de URL (sacar parámetros de tracking/session antes de dedupear).",
+          "added": "2026-07-06"
+        }
+      ]
+    },
+    {
+      "id": "caso-llm-serving",
+      "level": "ssr",
+      "area": "casos",
+      "title": "Caso: serving de LLMs (LLM serving / ChatGPT design)",
+      "summary": "Servir inferencia de LLMs a escala.",
+      "added": "2026-07-06",
+      "body": "Diseñar la plataforma que sirve un **LLM** en producción (estilo ChatGPT): recibe un prompt, genera tokens y los devuelve en **streaming**. El desafío no es el modelo, sino servir inferencia con **baja latencia** y **alto throughput** sobre **GPUs caras**.\n\n## 1. Requisitos\n\n**Funcionales:**\n- Recibir un prompt (con historial) y generar una respuesta token por token.\n- Devolver la respuesta en **streaming**.\n\n**No funcionales:**\n- **TTFT (time to first token)** bajo: la UX depende de que empiece rápido.\n- **Throughput** alto (tokens/s) para amortizar la GPU.\n- **Costo** controlado (las GPUs son el gasto dominante).\n\n## 2. Deep dive: cómo genera un LLM\n\nLa inferencia es **autoregresiva** (un token a la vez) y tiene dos fases:\n\n- **Prefill**: procesa todo el prompt de una (en paralelo) y produce el primer token. Determina el **TTFT**.\n- **Decode**: genera el resto **secuencialmente**, un token por vez, cada uno dependiendo del anterior.\n\n**Prefill** es **compute-bound** (satura los FLOPs de la GPU procesando todos los tokens juntos); **decode** es **memory-bandwidth-bound** (el cuello es leer los pesos y la KV cache de memoria para producir cada token). Por eso el batching ayuda mucho más al throughput del decode: agrupa secuencias para aprovechar el ancho de banda que si no queda ocioso.\n\nLa palanca clave de eficiencia es el **KV cache**: se guardan las *keys* y *values* de atención de los tokens ya procesados para no recomputarlos en cada paso. Ocupa memoria de GPU y crece con la longitud de la secuencia **y con el batch size** (requests concurrentes) — junto con los pesos, limita cuántos requests simultáneos entran en la GPU.\n\n## 3. Deep dive: throughput y costo\n\n- **Continuous batching**: agrupar dinámicamente requests de distinta longitud para mantener la GPU saturada. Sube muchísimo el throughput vs procesar de a uno (lo implementan vLLM, TGI, TensorRT-LLM).\n- **PagedAttention** (la innovación insignia de vLLM): pagina la KV cache en bloques no contiguos, como memoria virtual — elimina la fragmentación y permite compartir prefijos comunes, así entran más requests concurrentes en la misma GPU.\n- **Streaming (SSE)**: enviar cada token apenas se genera → TTFT percibido bajo.\n- **Quantization**: reducir la precisión **por debajo** de fp16/bf16 (la precisión base de serving) a int8/int4/fp8 (GPTQ, AWQ) — reduce memoria y acelera con algo de pérdida de calidad.\n- **Memoria del modelo**: params × bytes por param. Un modelo de **7B en fp16 (2 bytes)** ocupa ~**14 GB** solo de pesos; los modelos grandes se reparten entre GPUs (**model parallelism**).\n\n```mermaid\nflowchart TB\n  req[Prompt del usuario] --> cola[Cola de requests]\n  cola --> sched[Scheduler - continuous batching]\n  sched --> gpu[GPU workers - prefill y decode con KV cache]\n  gpu --> stream[Streaming de tokens - SSE]\n```\n\n## 4. Escala\n\n- Autoscaling de GPU workers según la cola; enrutar modelos chicos para queries simples (**model routing**).\n- Cachear respuestas frecuentes (semantic cache) para ahorrar cómputo.\n\n💡 **En la entrevista:** distinguí **prefill vs decode**, explicá el **KV cache** y el **continuous batching** como claves del throughput, y el trade-off **TTFT vs throughput**. Cerrá con costo: quantization, batching y model routing.",
+      "cards": [
+        {
+          "id": "caso-llm-serving-1",
+          "front": "¿Cuáles son las dos fases de la inferencia de un LLM?",
+          "back": "Prefill: procesa todo el prompt en paralelo y da el primer token (define el TTFT). Decode: genera el resto secuencialmente, un token a la vez, cada uno dependiendo del anterior.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-llm-serving-2",
+          "front": "¿Qué es el KV cache y por qué importa?",
+          "back": "Guarda las keys y values de atención de los tokens ya procesados para no recomputarlos en cada paso. Es clave para el throughput; ocupa memoria de GPU y crece con la longitud de secuencia y con el batch size (requests concurrentes). Junto con los pesos, define cuántos requests simultáneos caben en la GPU.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-llm-serving-3",
+          "front": "¿Qué es continuous batching?",
+          "back": "Agrupar dinámicamente requests de distinta longitud para mantener la GPU saturada (ej: vLLM). Sube mucho el throughput frente a procesar los requests de a uno.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-llm-serving-4",
+          "front": "¿Qué es el TTFT y por qué se optimiza?",
+          "back": "Time To First Token: cuánto tarda en aparecer el primer token. Con streaming (SSE) el usuario ve la respuesta apenas empieza, mejorando la latencia percibida.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-llm-serving-5",
+          "front": "¿Cuánta memoria ocupa un modelo y cómo se reduce?",
+          "back": "Aproximadamente params × bytes por param: un modelo de 7B en fp16 (2 bytes) ocupa ~14 GB de pesos. Se reduce con quantization (a int8/int4, por debajo de fp16) y los grandes se reparten entre GPUs (model parallelism).",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-llm-serving-6",
+          "front": "¿Cómo se baja el costo de servir un LLM?",
+          "back": "Continuous batching (más throughput por GPU), quantization (menos memoria), model routing (modelo chico para queries simples) y semantic cache para respuestas frecuentes.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-llm-serving-7",
+          "front": "¿Por qué el decode es el cuello de botella y no el prefill?",
+          "back": "El prefill procesa el prompt en paralelo (compute-bound), pero el decode es secuencial y memory-bandwidth-bound: el cuello es leer los pesos y la KV cache de memoria para generar cada token. Por eso domina el tiempo de las respuestas largas y por eso el batching sube tanto su throughput.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-llm-serving-8",
+          "front": "¿Qué hace vLLM distinto? (PagedAttention)",
+          "back": "PagedAttention: gestiona la KV cache en bloques paginados no contiguos (como la memoria virtual de un SO), eliminando la fragmentación y permitiendo compartir prefijos comunes entre requests. Así entran más requests concurrentes en la GPU. El continuous batching lo implementan también otros (TGI, TensorRT-LLM).",
+          "added": "2026-07-06"
+        }
+      ]
+    },
+    {
+      "id": "caso-recommender",
+      "level": "ssr",
+      "area": "casos",
+      "title": "Caso: sistema de recomendación (recommendation system design)",
+      "summary": "Recomendar items relevantes a cada usuario.",
+      "added": "2026-07-06",
+      "body": "Diseñar un **sistema de recomendación (recommender)**: dado un usuario, sugerir los items más relevantes (productos, videos, posts) entre millones. El patrón moderno combina **embeddings**, búsqueda vectorial y ranking con ML.\n\n## 1. Requisitos\n\n**Funcionales:**\n- Devolver una lista personalizada de items para un usuario dado.\n\n**No funcionales:**\n- **Baja latencia** (se sirve en cada visita).\n- Escalar a **millones de items** y usuarios.\n- Recomendaciones frescas y personalizadas.\n\n## 2. Deep dive: arquitectura en dos etapas\n\nNo se puede rankear con un modelo pesado sobre millones de items en tiempo real. Por eso se usa el patrón **two-stage** (candidate generation → ranking):\n\n| Etapa | Qué hace | Cómo |\n|---|---|---|\n| **Candidate generation (retrieval)** | de millones a ~cientos de candidatos | modelo **two-tower** (evolución del collaborative filtering / factorización de matrices clásica) que embeddea usuario e items; **ANN search** en una vector DB por similitud |\n| **Ranking** | ordena esos cientos con precisión | modelo más pesado que puntúa cada candidato con features de usuario, item y contexto |\n\n```mermaid\nflowchart LR\n  user[Usuario] --> cg[Candidate generation - two-tower + ANN]\n  items[(Millones de items - embeddings)] --> cg\n  cg --> cand[Cientos de candidatos]\n  cand --> rank[Ranking - modelo con features]\n  rank --> rec[Top N recomendaciones]\n```\n\n## 3. Deep dive: cold start, features y feedback\n\n- **Cold start**: usuarios o items nuevos sin historial → recomendar por **popularidad** o por contenido (content-based, usando atributos/embeddings del item).\n- **Features**: se sirven desde un **feature store** para que training y serving usen lo mismo.\n- **Feedback loop**: los clicks realimentan el entrenamiento, pero esto **amplifica sesgos** (popularity/exposure bias) porque el modelo solo aprende de lo que él mismo mostró — lo popular se retroalimenta. Se mitiga con **exploración** (epsilon-greedy, bandits) que muestra ítems fuera del top predicho.\n- **Evaluación**: offline con métricas de ranking (NDCG, MAP, Recall@K); pero la señal final es online, vía **A/B testing** sobre CTR/conversión — el ranking offline no siempre correlaciona con el impacto real.\n- **Twist moderno**: embeddings semánticos + un **LLM re-ranker** para el orden final.\n\n## 4. Escala\n\n- Los embeddings de items se precomputan **offline** y se indexan en la vector DB (ANN).\n- El candidate generation es rápido (ANN); solo el ranking, sobre pocos candidatos, corre el modelo pesado.\n\n💡 **En la entrevista:** la respuesta es la arquitectura **two-stage** (candidate generation con embeddings + ANN, luego ranking), más el manejo de **cold start** y el **feedback loop**. Es el mismo patrón retrieval→ranking que ves en feed y en búsqueda.",
+      "cards": [
+        {
+          "id": "caso-recommender-1",
+          "front": "¿Por qué un recommender usa arquitectura en dos etapas?",
+          "back": "Porque no se puede correr un modelo pesado sobre millones de items en tiempo real. Primero candidate generation reduce a ~cientos (rápido), después ranking los ordena con precisión (pesado).",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-recommender-2",
+          "front": "¿Cómo funciona el candidate generation?",
+          "back": "Un modelo two-tower embeddea usuario e items en el mismo espacio; se buscan los items más cercanos al usuario con ANN search en una vector DB. Pasa de millones a cientos.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-recommender-3",
+          "front": "¿Qué hace la etapa de ranking?",
+          "back": "Toma los cientos de candidatos y los puntúa con un modelo más pesado usando features de usuario, item y contexto, para producir el orden final.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-recommender-4",
+          "front": "¿Qué es el problema de cold start y cómo se maneja?",
+          "back": "Usuarios o items nuevos sin historial de interacciones. Se resuelve recomendando por popularidad o por contenido (atributos/embeddings del item).",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-recommender-5",
+          "front": "¿Qué es el feedback loop en un recommender?",
+          "back": "Los clicks realimentan el entrenamiento del modelo. Riesgo clave: amplifica sesgos (popularity/exposure bias), porque el modelo solo ve lo que él mismo mostró y lo popular gana más exposición. Se mitiga con exploración (epsilon-greedy, bandits).",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-recommender-6",
+          "front": "¿Cuál es el twist moderno en recomendación?",
+          "back": "Combinar collaborative filtering con embeddings semánticos y un LLM re-ranker para el orden final, en lugar de solo factorización de matrices clásica.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-recommender-7",
+          "front": "¿Cómo se evalúa un sistema de recomendación?",
+          "back": "Offline con métricas de ranking (NDCG, MAP, Recall@K) sobre datos históricos; pero la señal final es online, vía A/B testing midiendo CTR, conversión o engagement. El ranking offline no siempre correlaciona con el impacto real.",
+          "added": "2026-07-06"
+        }
+      ]
+    },
+    {
+      "id": "caso-semantic-search",
+      "level": "ssr",
+      "area": "casos",
+      "title": "Caso: búsqueda semántica (semantic search design)",
+      "summary": "Buscar por significado, no por keywords.",
+      "added": "2026-07-06",
+      "body": "Diseñar un sistema de **búsqueda semántica (semantic search)**: encontrar documentos por **significado**, no solo por coincidencia de palabras. Es el motor de **retrieval** que está detrás de un RAG, pero acá el objetivo es devolver los documentos relevantes, no generar una respuesta.\n\n## 1. Requisitos\n\n**Funcionales:**\n- Dada una query en lenguaje natural, devolver los documentos más relevantes por significado.\n\n**No funcionales:**\n- **Baja latencia** de búsqueda.\n- Escalar a millones de documentos.\n- Alta **relevancia** (buen recall y precisión).\n\n## 2. Deep dive: embeddings + ANN\n\nLos documentos se convierten en vectores (**embeddings**) offline y se indexan. En la búsqueda, se embeddea la query y se buscan los vectores más cercanos. Buscar el vecino exacto (comparar contra todos) no escala, así que se usa **ANN (approximate nearest neighbor)**: sacrifica un poco de recall por muchísima velocidad.\n\n| Índice ANN | Idea | Trade-off |\n|---|---|---|\n| **HNSW** | grafo navegable por capas | muy rápido y preciso; usa más memoria |\n| **IVF** | agrupa vectores en clusters y busca solo en algunos | menos memoria; hay que tunear cuántos clusters mirar |\n\nPara corpora que no entran en RAM, **IVF se combina con Product Quantization (IVF-PQ)** para comprimir los vectores.\n\n## 3. Deep dive: hybrid search y re-ranking\n\n- **Hybrid search**: combinar la búsqueda vectorial (semántica) con **BM25** (keywords) mejora el recall — captura tanto significado como términos exactos (nombres, códigos). Los resultados se fusionan con **RRF (reciprocal rank fusion)**.\n- **Re-ranking**: un **cross-encoder** reordena el top-k por relevancia real (más preciso que el bi-encoder del retrieval, pero más lento, por eso solo sobre pocos).\n\n```mermaid\nflowchart TB\n  q[Query en lenguaje natural] --> emb[Embedding de la query]\n  emb --> ann[ANN search en vector DB]\n  q --> bm25[BM25 - keywords]\n  ann --> fusion[Fusion RRF]\n  bm25 --> fusion\n  fusion --> rerank[Re-ranking - cross-encoder]\n  rerank --> res[Documentos ordenados]\n```\n\n## 4. Relación con RAG\n\nLa búsqueda semántica **es el paso de retrieval** de un RAG. La diferencia: acá el output final son los documentos; en RAG esos documentos se le pasan a un LLM para que **genere** una respuesta.\n\n💡 **En la entrevista:** embeddings + **ANN (HNSW)** para escalar, **hybrid search + RRF** para recall, y **re-ranking con cross-encoder** para precisión. Aclará que ANN cambia recall por latencia, y que esto es el retrieval de un RAG.",
+      "cards": [
+        {
+          "id": "caso-semantic-search-1",
+          "front": "¿Qué es la búsqueda semántica?",
+          "back": "Encontrar documentos por significado (con embeddings y similitud de vectores), no solo por coincidencia de palabras clave. Captura sinónimos y relaciones conceptuales.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-semantic-search-2",
+          "front": "¿Por qué se usa ANN y no búsqueda exacta de vecinos?",
+          "back": "Comparar la query contra todos los vectores no escala a millones de documentos. ANN (approximate nearest neighbor) sacrifica un poco de recall por muchísima velocidad.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-semantic-search-3",
+          "front": "¿Qué es HNSW?",
+          "back": "Un índice ANN basado en un grafo navegable por capas. Es muy rápido y preciso para búsqueda de vecinos aproximados, a costa de usar más memoria.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-semantic-search-4",
+          "front": "¿Qué es hybrid search y cómo se combinan los resultados?",
+          "back": "Combinar búsqueda vectorial (semántica) con BM25 (keywords) para mejorar el recall. Los rankings se fusionan con RRF (reciprocal rank fusion).",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-semantic-search-5",
+          "front": "¿Qué relación hay entre búsqueda semántica y RAG?",
+          "back": "La búsqueda semántica es el paso de retrieval de un RAG. La diferencia: acá el resultado son los documentos; en RAG se le pasan a un LLM para que genere una respuesta.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-semantic-search-6",
+          "front": "¿Por qué el re-ranking usa un cross-encoder solo sobre el top-k?",
+          "back": "El cross-encoder es más preciso pero más lento que el bi-encoder del retrieval inicial; por eso se aplica solo a los pocos candidatos del top-k y no a todo el corpus.",
+          "added": "2026-07-06"
+        }
+      ]
+    },
+    {
+      "id": "caso-feature-store",
+      "level": "ssr",
+      "area": "casos",
+      "title": "Caso: feature store para ML (feature store design)",
+      "summary": "Servir features consistentes a training y serving.",
+      "added": "2026-07-06",
+      "body": "Diseñar un **feature store**: el sistema que computa, almacena y sirve las **features** (variables de entrada) de los modelos de ML, garantizando que **training y serving usen exactamente lo mismo**. Resuelve uno de los bugs más caros de ML en producción: el **train/serve skew**.\n\n## 1. Requisitos\n\n**Funcionales:**\n- Definir features una vez y reutilizarlas en varios modelos.\n- Servir features con baja latencia en inferencia y en lote para entrenar.\n\n**No funcionales:**\n- **Consistencia** entre training y serving (misma lógica de cómputo).\n- **Baja latencia** en el online store; **throughput** en el offline.\n\n## 2. Deep dive: online vs offline store\n\n| Store | Para qué | Tecnología típica |\n|---|---|---|\n| **Offline store** | histórico masivo para entrenar | data warehouse / archivos (parquet) |\n| **Online store** | features frescas con baja latencia para servir | key-value en memoria (Redis) |\n\nLa misma feature se materializa en los dos, computada por el **mismo pipeline**, para que el modelo vea en producción lo mismo que en entrenamiento. Las features se organizan por **entity** (la clave con la que se buscan: user_id, item_id).\n\n```mermaid\nflowchart TB\n  fuentes[Fuentes de datos] --> pipe[Feature pipelines - batch y streaming]\n  pipe --> off[(Offline store - training)]\n  pipe --> on[(Online store - serving baja latencia)]\n  off --> train[Entrenamiento del modelo]\n  on --> serve[Inferencia en produccion]\n```\n\n## 3. Deep dive: skew y correctitud temporal\n\n- **Train/serve skew**: si las features en training se computan distinto que en serving, el modelo rinde bien en test y mal en producción. El feature store lo evita con **definiciones compartidas**.\n- **Point-in-time correctness**: al armar el dataset de training hay que usar el valor de la feature **tal como era en el momento del evento**, no el actual. Usar valores del futuro es **data leakage** y infla las métricas de forma engañosa.\n- **Pipelines**: batch (ej: Spark, features diarias) + streaming (features en tiempo real, ej: cantidad de clicks en la última hora).\n\n## 4. Escala\n\n- El online store se dimensiona por latencia (Redis particionado); el offline por volumen.\n- Las features se versionan y monitorean (drift) como parte del ciclo de vida del modelo.\n\n💡 **En la entrevista:** el eje es **online vs offline store** con el **mismo pipeline** para evitar **train/serve skew**, y la **point-in-time correctness** para no meter data leakage al armar el dataset de training.",
+      "cards": [
+        {
+          "id": "caso-feature-store-1",
+          "front": "¿Qué problema resuelve un feature store?",
+          "back": "Servir features de ML de forma consistente entre training y serving, evitando el train/serve skew, y permitir reutilizar definiciones de features entre modelos.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-feature-store-2",
+          "front": "¿Diferencia entre online store y offline store?",
+          "back": "Offline: histórico masivo para entrenar (data warehouse/parquet). Online: features frescas con baja latencia para servir en inferencia (key-value en memoria como Redis).",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-feature-store-3",
+          "front": "¿Qué es el train/serve skew?",
+          "back": "Cuando las features se computan distinto en training que en serving, el modelo rinde bien en test pero mal en producción. Se evita usando el mismo pipeline/definición para ambos.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-feature-store-4",
+          "front": "¿Qué es point-in-time correctness?",
+          "back": "Al armar el dataset de training, usar el valor de cada feature tal como era en el momento del evento, no el valor actual. Evita el data leakage de usar información del futuro.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-feature-store-5",
+          "front": "¿Qué es el data leakage en features y por qué es peligroso?",
+          "back": "Usar en training información que no estaría disponible al momento de predecir (valores del futuro). Infla las métricas de forma engañosa: el modelo parece bueno pero falla en producción.",
+          "added": "2026-07-06"
+        },
+        {
+          "id": "caso-feature-store-6",
+          "front": "¿Qué tipos de pipelines alimentan un feature store?",
+          "back": "Batch (ej: Spark, features recalculadas periódicamente) y streaming (features en tiempo real, como clicks en la última hora).",
+          "added": "2026-07-06"
+        }
+      ]
     }
   ]
 }
