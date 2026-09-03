@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import DOMPurify from "dompurify";
 import { marked } from "marked";
 import hljs from "highlight.js/lib/core";
 import python from "highlight.js/lib/languages/python";
@@ -23,6 +24,8 @@ for (const [, mod] of Object.entries(_mods)) {
   if (Array.isArray(data?.lessons)) _lessons.push(...data.lessons);
 }
 const content = { ...meta, lessons: _lessons };
+
+const renderMarkdown = (markdown) => DOMPurify.sanitize(marked.parse(markdown));
 
 // bloques ```mermaid -> <div class="mermaid"> (se renderiza al abrir la lección);
 // el resto del código se escapa normal.
@@ -335,7 +338,7 @@ function Lesson({ lesson, done, nextId, onComplete, onNavigate, onBack }) {
       if (cancelled) return;
       mermaid.initialize({
         startOnLoad: false,
-        securityLevel: "loose",
+        securityLevel: "strict",
         theme: "base",
         fontFamily: "JetBrains Mono, monospace",
         themeVariables: {
@@ -359,7 +362,7 @@ function Lesson({ lesson, done, nextId, onComplete, onNavigate, onBack }) {
     <article className="lesson">
       <button className="back" onClick={onBack}>← Volver</button>
       <h1>{lesson.title}</h1>
-      <div className="body" ref={bodyRef} dangerouslySetInnerHTML={{ __html: marked.parse(lesson.body) }} />
+      <div className="body" ref={bodyRef} dangerouslySetInnerHTML={{ __html: renderMarkdown(lesson.body) }} />
       {done ? (
         <>
           <p className="ok">✓ Aprendida — sus {lesson.cards.length} tarjetas están en el Repaso.</p>

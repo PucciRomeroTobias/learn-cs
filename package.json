@@ -5,10 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node scripts/validate-content.mjs",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check": "npm test && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
+    "dompurify": "^3.4.14",
     "highlight.js": "^11.11.1",
     "marked": "^14.1.0",
     "mermaid": "^11.4.0",
