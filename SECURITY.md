@@ -2,7 +2,7 @@
 
 ## Reportar una vulnerabilidad
 
-Si encontrás una vulnerabilidad, no abras un issue público. Reportala desde la pestaña **Security** del repositorio mediante un *private vulnerability report*.
+Si encontrás una vulnerabilidad, no abras un issue público. Usá **Report a vulnerability** desde la pestaña **Security** del repositorio. Si esa opción no está disponible, contactame por uno de los canales indicados en mi perfil de GitHub sin publicar los detalles.
 
 Incluí una descripción, pasos para reproducirla y su impacto posible. Voy a confirmar la recepción y evaluar el reporte antes de publicar detalles.
 
