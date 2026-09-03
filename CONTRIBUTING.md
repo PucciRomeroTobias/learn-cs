@@ -4,7 +4,7 @@ Gracias por ayudar a mejorar learn-cs. Podés proponer correcciones, contenido n
 
 ## Preparar el proyecto
 
-Necesitás Node.js 20 o superior.
+Necesitás Node.js 20.19 o superior (o 22.12+).
 
 ```bash
 git clone https://github.com/PucciRomeroTobias/learn-cs.git

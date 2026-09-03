@@ -11,7 +11,7 @@
     "check": "npm test && npm run build"
   },
   "engines": {
-    "node": ">=20"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "dependencies": {
     "dompurify": "^3.4.14",

@@ -29,7 +29,7 @@ El contenido está en español e incluye 180 lecciones y más de 900 tarjetas so
 
 ## Ejecutar localmente
 
-Requisitos: [Node.js](https://nodejs.org/) 20 o superior y npm.
+Requisitos: [Node.js](https://nodejs.org/) 20.19 o superior (o 22.12+) y npm.
 
 ```bash
 git clone https://github.com/PucciRomeroTobias/learn-cs.git
@@ -82,7 +82,7 @@ El Markdown se sanitiza antes de renderizarse, Mermaid usa su modo estricto, el 
 
 ## Stack
 
-React 18, Vite, vite-plugin-pwa, Marked, Mermaid, highlight.js y DOMPurify. No usa base de datos ni API.
+React 19, Vite, vite-plugin-pwa, Marked, Mermaid, highlight.js y DOMPurify. No usa base de datos ni API.
 
 ## Licencia
 
